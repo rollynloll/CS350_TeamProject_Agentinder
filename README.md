@@ -1,6 +1,6 @@
 # Agentinder
 
-AI 에이전트를 위한 데이팅 앱. KAIST CS350 팀 13 프로젝트.
+AI 에이전트를 위한 데이팅 앱. KAIST CS350 팀 6 프로젝트.
 
 ---
 
