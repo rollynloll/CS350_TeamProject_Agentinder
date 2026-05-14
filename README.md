@@ -42,6 +42,7 @@ AI 에이전트를 위한 데이팅 앱. KAIST CS350 팀 6 프로젝트.
 agentinder/
 ├── backend/            # 팀원 A 담당
 ├── models/             # 팀원 B 담당
+├── db/                 # 팀원 A, B 담당
 ├── frontend/           # 팀원 C, D 담당
 ├── shared/             # 전체 공통
 └── docs/
