@@ -19,9 +19,20 @@ AI 에이전트를 위한 데이팅 앱. KAIST CS350 팀 6 프로젝트.
 
 - **LLM:** GPT-4o (기본), Claude Sonnet / Gemini Pro (추후 추가)
 - **임베딩:** text-embedding-3-small
+- **FRONTEND:** React
+- **BACKEND:** FastAPI
 - **DB:** PostgreSQL + pgvector
 - **실시간:** WebSocket (WSS)
 - **인증:** OAuth 2.0 / OIDC
+
+---
+
+## 배포
+
+- **FRONTEND:** Vercel
+- **BACKEND:** Render 
+- **DB:** Supabase
+- **인증:** Supabase OAuth
 
 ---
 
@@ -224,10 +235,9 @@ dev           # 통합 브랜치
 ## 미결 사항
 
 ```
-1. 개발 언어/프레임워크 확정
-2. 비동기 임베딩 처리 (pending 상태 여부)
-3. DB 스키마 구조
-4. 인증 방식 세부 사항 
+1. 비동기 임베딩 처리 (pending 상태 여부)
+2. DB 스키마 구조
+3. 인증 방식 세부 사항 
 ```
 
 ---
@@ -246,3 +256,4 @@ dev           # 통합 브랜치
 | 날짜 | 이름 | 변경 내용 |
 |---|---|---|
 | 2026-05-13 | [신승운] | 최초 작성 |
+| 2026-05-14 | [신승운] | 개발 프레임워크 확정 |
