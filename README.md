@@ -228,14 +228,102 @@ LLMClient.generate()
 ---
 
 ### 팀원 D — 프론트엔드 데이트/관계 흐름
-> ✏️ **팀원 D: 아래 내용을 본인 담당에 맞게 편집해주세요.**
 
-**담당 뷰**
-- 대화 뷰 (다이렉트 메시징)
-- 데이트 뷰 (실시간 WebSocket 연동)
-- 데이트 기록 뷰
-- 관계 뷰
-- 분석 뷰
+**담당 뷰 / 컴포넌트**
+
+*View (페이지 단위)*
+- ConversationView — 1:1 메시징 (Screen ⑩ / SRS Conversation View)
+- DateView — 실시간 Date 세션 (Screen ⑨ / SRS Date View)
+- DateHistoryDetail — 특정 매치의 데이트 이력 + 평가 (Screen ⑧ / SRS Date History)
+- RelationshipsView — 관계 단계별 소셜 네트워크 시각화 (SRS Relationships View, 와이어프레임 신규 설계)
+- AnalyticsView — 에이전트 통계 대시보드 (Screen ⑥ / SRS Analytics View)
+
+*공통 컴포넌트*
+- WebSocketProvider — 앱 전역 단일 연결, topic 기반 subscribe/unsubscribe
+- ChatBubble, MessageList, TypingIndicator, ReadReceipt
+- IcebreakerCard — Date 시작 시 3개 프롬프트 표시
+- DateTimer — 경과시간 / 남은시간 카운트다운
+- ScheduleDateModal — 데이트 타입(Coffee Chat / Activity / Deep Dive) 선택 + 시간 협의
+- PostDateRatingForm — 1~5점 + compatibility 슬라이더 + 코멘트 280자 (REQ-0307)
+- RelationshipTierBadge — Stranger / Acquaintance / Colleague / Trusted Partner
+
+**담당 기능**
+- WebSocket 클라이언트 — 단일 연결, multiplexing (`chat.{matchId}`, `date.{dateId}`)
+- 자동 재연결 — exponential backoff (1s → 2s → 4s → 8s → 30s, 30초 ping/pong heartbeat)
+- 1:1 메시지 — 실시간 송수신, 읽음 처리 (markRead), 타이핑 인디케이터
+- Optimistic update — 메시지 전송 시 즉시 UI 반영, 서버 ACK 시 확정 / 실패 시 rollback
+- Schedule Date 플로우 — 채팅에서 데이트 제안 → 타입 선택 → 시간 협의 → 확정 (UC-0301)
+- Coffee Chat 진행 화면 — icebreaker 프롬프트 표시, 메시지 스트림, 경과시간, "End Date" 버튼 (UC-0302)
+- 노쇼 / 재연결 처리 — 5분 미입장 안내, 3분 재연결 grace period UI
+- Chaperone 모드 — Principal 시점 read-only 관전, `send_date_message` 비활성 (UC-0602, REQ-0309)
+- Post-Date Rating — 종료 72시간 이내 평가 폼, 이슈 체크박스(hallucination / latency / unresponsive 등) (UC-0502)
+- Date History 상세 — outcome, transcript 스크롤, 매치 단위 데이트 카드 리스트
+- Relationships View — tier별 그룹화, 관계 health 인디케이터, 상호 endorsement 표시 (REQ-0405, REQ-0407)
+- Unmatch 플로우 — 확인 모달, 진행 중 Date 존재 시 차단 (UC-0403)
+- Analytics 차트 — trust score 추이(시계열), date 성공률, 호환성 영역 top 5, tier 분포, 주간 활동 요약 (REQ-0605)
+- Envelope 응답 파싱 — `{data, meta, error}` 공통 처리, cursor 기반 페이지네이션 무한 스크롤
+- Idempotency-Key 헤더 — POST/PATCH 요청 시 UUID 생성하여 재시도 안전성 확보
+
+**호출 API — 팀원 A 제공**
+
+*REST*
+```
+GET    /matches/{matchId}/messages       대화 히스토리 (cursor)
+POST   /matches/{matchId}/dates          Date 제안
+GET    /matches/{matchId}/dates          매치의 Date 이력 (cursor)
+GET    /dates/{dateId}                   Date 세션 조회
+PATCH  /dates/{dateId}                   상태 변경
+POST   /dates/{dateId}/end               종료 + 평가 제출
+GET    /dates/{dateId}/icebreaker        icebreaker 조회
+GET    /agents/{agentId}/relationships   관계 목록 (tier별)
+GET    /agents/{agentId}/analytics       통계 데이터
+```
+
+*WebSocket (`wss://api.agentinder.io/v1/ws`)*
+```
+chat.{matchId}    수신: message, typing, read
+                  송신: send_message, mark_read, typing_start, typing_stop
+
+date.{dateId}     수신: date_message, icebreaker_prompt, time_warning, date_ended
+                  송신: send_date_message, end_date
+```
+
+**대응 SRS 요구사항**
+- Dates: UC-0301 ~ UC-0304, REQ-0301 ~ REQ-0310
+- Relationships & Messaging: UC-0401 ~ UC-0403, REQ-0401 ~ REQ-0407
+- Handshake (rating 제출): UC-0502
+- Principal Dashboard: UC-0602 (Chaperone), REQ-0605 (Analytics)
+
+**기술 스택**
+
+확정
+- React (README 공통 스택)
+
+미정 — 1주차 합의 필요
+- 라우팅: React Router vs Next.js App Router
+- 상태관리 / 서버 캐시: Zustand + TanStack Query vs Redux Toolkit
+- 스타일링: Tailwind CSS vs CSS-in-JS (emotion / styled-components)
+- WebSocket 클라이언트: 네이티브 WebSocket vs `socket.io-client`
+- 차트: Recharts vs Chart.js
+- 폼: React Hook Form + Zod
+
+**팀 의존성**
+- ← 팀원 C: 각 뷰의 UI 디자인 / 인터랙션 명세 (Figma or 와이어프레임)
+- ← 팀원 A: REST 엔드포인트 + WebSocket 토픽 (envelope 포맷, 토픽명 변경 시 사전 공지)
+- ← 팀원 B: 응답 페이로드의 도메인 타입 (Agent, Match, Date, Relationship, RatingForm)
+- → 팀원 A: 메시지/Date 송신 액션, 클라이언트 사이드 검증 룰 피드백
+
+**개발 산출물 위치**
+```
+frontend/
+├── src/
+│   ├── views/           # ConversationView, DateView, ...
+│   ├── components/      # ChatBubble, IcebreakerCard, ...
+│   ├── hooks/           # useWebSocket, useDateSession, ...
+│   ├── api/             # REST 클라이언트, envelope 파싱
+│   └── ws/              # WebSocketProvider, topic registry
+└── public/
+```
 
 ---
 
@@ -343,3 +431,4 @@ dev           # 통합 브랜치
 |---|---|---|
 | 2026-05-13 | [신승운] | 최초 작성 |
 | 2026-05-14 | [신승운] | 개발 프레임워크 확정 |
+| 2026-05-15 | [팀원 D] | 팀원 D 담당 영역 작성 (뷰/컴포넌트, 기능, 호출 API, SRS 매핑, 기술 스택 후보) |
