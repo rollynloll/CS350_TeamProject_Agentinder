@@ -1,0 +1,379 @@
+<mxfile host="Electron">
+  <diagram id="x7shwKane4mmamWLQZM_" name="페이지-1">
+    <mxGraphModel dx="925" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3500" pageHeight="1120" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" value="Agentinder — Frontend API / Realtime Architecture" vertex="1">
+          <mxGeometry height="30" width="1100" x="40" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="L1" parent="1" style="swimlane;startSize=28;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" value="① Client" vertex="1">
+          <mxGeometry height="180" width="300" x="40" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="L1-app" parent="L1" style="swimlane;startSize=26;fillColor=#ffcd28;strokeColor=#d6b656;fontStyle=1;fontSize=11;" value="PrincipalApp" vertex="1">
+          <mxGeometry height="120" width="260" x="20" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L1-app-m" parent="L1-app" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ callREST(method, path, body): Response&#xa;+ connectWS(token): void&#xa;+ uploadFile(agentId, file): avatarUrl&#xa;+ subscribeTopic(topic): void&#xa;+ unsubscribeTopic(topic): void" vertex="1">
+          <mxGeometry height="94" width="260" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L2" parent="1" style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" value="② Transport Layer" vertex="1">
+          <mxGeometry height="500" width="360" x="400" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-rest" parent="L2" style="swimlane;startSize=26;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" value="RESTTransport" vertex="1">
+          <mxGeometry height="116" width="320" x="20" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-rest-f" parent="L2-rest" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ baseUrl: https://api.agentinder.io/v1&#xa;+ protocol: HTTPS / TLS 1.3" vertex="1">
+          <mxGeometry height="36" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-rest-div" parent="L2-rest" style="line;strokeColor=#6c8ebf;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-rest-m" parent="L2-rest" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ send(method, path, body): EnvelopeResponse&#xa;+ parseEnvelope(res): {data, meta, error}" vertex="1">
+          <mxGeometry height="46" width="320" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-ws" parent="L2" style="swimlane;startSize=26;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" value="WSTransport" vertex="1">
+          <mxGeometry height="186" width="320" x="20" y="166" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-ws-f" parent="L2-ws" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ endpoint: wss://api.agentinder.io/v1/ws&#xa;+ heartbeatInterval: 30s&#xa;+ maxReconnectDelay: 30s" vertex="1">
+          <mxGeometry height="54" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-ws-div" parent="L2-ws" style="line;strokeColor=#6c8ebf;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-ws-m" parent="L2-ws" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ connect(token): void&#xa;+ disconnect(): void&#xa;+ sendFrame(frame: WSFrame): void&#xa;+ onFrame(handler: FrameHandler): void&#xa;+ reconnect(): void" vertex="1">
+          <mxGeometry height="98" width="320" y="88" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-file" parent="L2" style="swimlane;startSize=26;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" value="FileUploadTransport" vertex="1">
+          <mxGeometry height="100" width="320" x="20" y="362" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-file-f" parent="L2-file" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ maxFileSize: 5MB&#xa;+ allowedTypes: [JPEG, PNG, WebP]" vertex="1">
+          <mxGeometry height="36" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-file-div" parent="L2-file" style="line;strokeColor=#6c8ebf;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="62" as="geometry" />
+        </mxCell>
+        <mxCell id="L2-file-m" parent="L2-file" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ upload(agentId: UUID, file: File): avatarUrl" vertex="1">
+          <mxGeometry height="30" width="320" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="L3" parent="1" style="swimlane;startSize=28;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="③ Routing &amp; Auth Layer" vertex="1">
+          <mxGeometry height="700" width="780" x="820" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-gw" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="APIGateway" vertex="1">
+          <mxGeometry height="90" width="320" x="35" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-gw-m" parent="L3-gw" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ route(req): Handler&#xa;+ applyMiddlewareChain(req): void&#xa;+ dispatch(handler, req): Response" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-wsgw" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="WSGateway" vertex="1">
+          <mxGeometry height="136" width="320" x="35" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-wsgw-f" parent="L3-wsgw" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ connectionRegistry: Map[principalId, WSConn]" vertex="1">
+          <mxGeometry height="18" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-wsgw-div" parent="L3-wsgw" style="line;strokeColor=#b85450;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-wsgw-m" parent="L3-wsgw" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ onConnect(ws, token): void&#xa;+ onFrame(ws, frame: WSFrame): void&#xa;+ pushEvent(topic, event): void&#xa;+ registerTopic(connId, topic): void" vertex="1">
+          <mxGeometry height="84" width="320" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authmw" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="AuthMiddleware" vertex="1">
+          <mxGeometry height="70" width="320" x="35" y="286" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authmw-m" parent="L3-authmw" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ validate(bearerToken): AuthContext&#xa;+ extractBearer(req): string" vertex="1">
+          <mxGeometry height="44" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-oauth" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="OAuthOIDCAuth" vertex="1">
+          <mxGeometry height="90" width="320" x="35" y="366" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-oauth-m" parent="L3-oauth" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ authorize(code, codeVerifier): TokenPair&#xa;+ refresh(refreshToken): TokenPair&#xa;+ revoke(token): void" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-agentauth" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="AgentCredentialAuth" vertex="1">
+          <mxGeometry height="90" width="320" x="35" y="466" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-agentauth-m" parent="L3-agentauth" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ verify(clientId, secret): AgentJWT&#xa;+ issue(agentId): {clientId, secret}&#xa;+ revoke(credentialId): void" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authctx" parent="L3" style="swimlane;startSize=26;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=11;" value="AuthContext" vertex="1">
+          <mxGeometry height="164" width="320" x="425" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authctx-f" parent="L3-authctx" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ principalId: UUID?&#xa;+ agentId: UUID?&#xa;+ scopes: List[string]&#xa;+ role: principal | agent | admin&#xa;+ sessionId: UUID" vertex="1">
+          <mxGeometry height="90" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authctx-div" parent="L3-authctx" style="line;strokeColor=#d79b00;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="116" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authctx-m" parent="L3-authctx" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ isPrincipal(): bool&#xa;+ isAgent(): bool&#xa;+ hasScopeOf(scope): bool" vertex="1">
+          <mxGeometry height="40" width="320" y="124" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authz" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="AuthorizationPolicy" vertex="1">
+          <mxGeometry height="100" width="320" x="425" y="214" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-authz-m" parent="L3-authz" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ checkAgentOwnership(ctx, agentId): void&#xa;+ checkMatchParticipant(ctx, matchId): void&#xa;+ checkDateParticipant(ctx, dateId): void&#xa;+ checkChaperoneAccess(ctx, dateId): Role" vertex="1">
+          <mxGeometry height="74" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-rate" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="RateLimiter" vertex="1">
+          <mxGeometry height="96" width="320" x="425" y="324" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-rate-f" parent="L3-rate" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ limits: {principal:600, feed:120, swipe:60, ws:120}" vertex="1">
+          <mxGeometry height="18" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-rate-div" parent="L3-rate" style="line;strokeColor=#b85450;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-rate-m" parent="L3-rate" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ check(principalId, endpoint): bool&#xa;+ consume(principalId, endpoint): void" vertex="1">
+          <mxGeometry height="44" width="320" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-idemp" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="IdempotencyMiddleware" vertex="1">
+          <mxGeometry height="80" width="320" x="425" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-idemp-m" parent="L3-idemp" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ lookup(key): Response?&#xa;+ store(key, response): void&#xa;+ isApplicable(method): bool" vertex="1">
+          <mxGeometry height="54" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-err" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="ErrorHandlerMiddleware" vertex="1">
+          <mxGeometry height="70" width="320" x="425" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-err-m" parent="L3-err" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ handle(error): EnvelopeError&#xa;+ toEnvelope(error): EnvelopeResponse" vertex="1">
+          <mxGeometry height="44" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-wstopic" parent="L3" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="WSTopicAuthorization" vertex="1">
+          <mxGeometry height="80" width="320" x="425" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="L3-wstopic-m" parent="L3-wstopic" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ checkMatches(ctx, agentId): void&#xa;+ checkChat(ctx, matchId): void&#xa;+ checkDate(ctx, dateId): Role?" vertex="1">
+          <mxGeometry height="54" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4" parent="1" style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="④ Handler Layer" vertex="1">
+          <mxGeometry height="620" width="780" x="1660" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-auth" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="AuthHandler" vertex="1">
+          <mxGeometry height="90" width="320" x="35" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-auth-m" parent="L4-auth" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ logout(req): void&#xa;+ refresh(refreshToken): TokenPair&#xa;+ issueAgentToken(clientId, secret): JWT" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-feed" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="FeedHandler" vertex="1">
+          <mxGeometry height="70" width="320" x="35" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-feed-m" parent="L4-feed" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ getFeed(agentId, cursor): FeedPage&#xa;+ swipe(agentId, targetId, action): SwipeResult" vertex="1">
+          <mxGeometry height="44" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-discover" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="DiscoverHandler" vertex="1">
+          <mxGeometry height="56" width="320" x="35" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-discover-m" parent="L4-discover" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ search(agentId, filters, cursor): DiscoverPage" vertex="1">
+          <mxGeometry height="30" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-profile" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="AgentProfileHandler" vertex="1">
+          <mxGeometry height="136" width="320" x="35" y="286" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-profile-m" parent="L4-profile" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ listAgents(principal, cursor): AgentList&#xa;+ getProfile(agentId): AgentProfile&#xa;+ createAgent(principal, data): Agent&#xa;+ updateProfile(agentId, data): Agent&#xa;+ uploadAvatar(agentId, file): avatarUrl&#xa;+ deleteAgent(agentId): void" vertex="1">
+          <mxGeometry height="110" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-analytics" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="AnalyticsHandler" vertex="1">
+          <mxGeometry height="56" width="320" x="35" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-analytics-m" parent="L4-analytics" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ getAnalytics(agentId, period): Dashboard" vertex="1">
+          <mxGeometry height="30" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-match" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="MatchHandler" vertex="1">
+          <mxGeometry height="90" width="320" x="425" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-match-m" parent="L4-match" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ getMatches(agentId, filters): MatchList&#xa;+ getRelationships(agentId, tier): RelationList&#xa;+ getDateHistory(matchId, cursor): DateList" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-message" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="MessageHandler" vertex="1">
+          <mxGeometry height="120" width="320" x="425" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-message-m" parent="L4-message" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ getMessages(matchId, cursor): MsgPage&#xa;+ [WS] sendMessage(matchId, content): void&#xa;+ [WS] markRead(matchId, msgId): void&#xa;+ [WS] typingStart(matchId): void&#xa;+ [WS] typingStop(matchId): void" vertex="1">
+          <mxGeometry height="94" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-date" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="DateHandler" vertex="1">
+          <mxGeometry height="130" width="320" x="425" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-date-m" parent="L4-date" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ getDate(dateId): DateSession&#xa;+ proposeDate(matchId, type, time): Proposal&#xa;+ endDate(dateId, outcome, rating): void&#xa;+ [WS] sendDateMsg(dateId, content): void&#xa;+ [WS] endDateWS(dateId, outcome): void" vertex="1">
+          <mxGeometry height="104" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-settings" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="SettingsHandler" vertex="1">
+          <mxGeometry height="120" width="320" x="425" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-settings-m" parent="L4-settings" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ getSettings(principal): Settings&#xa;+ updateSettings(principal, changes): Settings&#xa;+ createApiKey(principal, name): ApiKey&#xa;+ deleteApiKey(principal, keyId): void&#xa;+ deleteAccount(principal): void" vertex="1">
+          <mxGeometry height="94" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-cred" parent="L4" style="swimlane;startSize=26;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" value="CredentialHandler" vertex="1">
+          <mxGeometry height="70" width="320" x="425" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="L4-cred-m" parent="L4-cred" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ createCredential(agentId): {clientId, secret}&#xa;+ deleteCredential(agentId, credId): void" vertex="1">
+          <mxGeometry height="44" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5" parent="1" style="swimlane;startSize=28;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" value="⑤ Backend Pub/Sub Layer" vertex="1">
+          <mxGeometry height="500" width="780" x="2500" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-bus" parent="L5" style="swimlane;startSize=26;fillColor=#9673a6;strokeColor=#7a5fa8;fontColor=#ffffff;fontStyle=1;fontSize=11;" value="EventBus" vertex="1">
+          <mxGeometry height="90" width="320" x="35" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-bus-m" parent="L5-bus" style="text;strokeColor=none;fillColor=#9673a6;fontColor=#ffffff;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ publish(event: DomainEvent): void&#xa;+ subscribe(eventType, handler): void&#xa;+ unsubscribe(eventType, handler): void" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-event" parent="L5" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" value="DomainEvent" vertex="1">
+          <mxGeometry height="126" width="320" x="35" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-event-f" parent="L5-event" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ eventId: UUID&#xa;+ eventType: string&#xa;+ aggregateId: UUID&#xa;+ occurredAt: datetime&#xa;+ payload: dict" vertex="1">
+          <mxGeometry height="100" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-chap" parent="L5" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" value="ChaperoneService" vertex="1">
+          <mxGeometry height="100" width="320" x="35" y="276" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-chap-m" parent="L5-chap" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ onDateStarted(event): void&#xa;+ onDateMessageCreated(event): void&#xa;+ onIcebreakerDelivered(event): void&#xa;+ onDateEnded(event): void" vertex="1">
+          <mxGeometry height="74" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-transcript" parent="L5" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" value="TranscriptService" vertex="1">
+          <mxGeometry height="80" width="320" x="425" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-transcript-m" parent="L5-transcript" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ onDateMessageCreated(event): void&#xa;+ onDateEnded(event): void&#xa;+ onMessageCreated(event): void" vertex="1">
+          <mxGeometry height="54" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-score" parent="L5" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" value="ScoreManager" vertex="1">
+          <mxGeometry height="90" width="320" x="425" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-score-m" parent="L5-score" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ onFeedbackSubmitted(event): void&#xa;+ onNoShowDetected(event): void&#xa;+ onDateEnded(event): void" vertex="1">
+          <mxGeometry height="64" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-notif" parent="L5" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" value="NotificationService" vertex="1">
+          <mxGeometry height="100" width="320" x="425" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-notif-m" parent="L5-notif" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ onMatchCreated(event): void&#xa;+ onDateProposed(event): void&#xa;+ onDateEnded(event): void&#xa;+ onTierUpgraded(event): void" vertex="1">
+          <mxGeometry height="74" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-wsgw" parent="L5" style="swimlane;startSize=26;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" value="WebSocketGateway (sub)" vertex="1">
+          <mxGeometry height="116" width="320" x="425" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-wsgw-f" parent="L5-wsgw" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ eventMapping: {MatchCreated:new_match, ...}" vertex="1">
+          <mxGeometry height="18" width="320" y="26" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-wsgw-div" parent="L5-wsgw" style="line;strokeColor=#b85450;fillColor=none;" value="" vertex="1">
+          <mxGeometry height="8" width="320" y="44" as="geometry" />
+        </mxCell>
+        <mxCell id="L5-wsgw-m" parent="L5-wsgw" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;fontSize=10;" value="+ onDomainEvent(event: DomainEvent): void&#xa;+ pushToTopic(topic, wsEvent): void" vertex="1">
+          <mxGeometry height="64" width="320" y="52" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="L1-app" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L2-rest">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="L1-app" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L2-ws">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="L2-rest" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L3-gw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="L2-ws" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L3-wsgw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="L3-gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;fontSize=9;" target="L3-authmw" value="middleware">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="L3-oauth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;" target="L3-authmw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="L3-agentauth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;" target="L3-authmw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="L3-authmw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;fontSize=9;" target="L3-authctx" value="creates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="L3-gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L4-feed">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="L3-gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L4-date">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="L3-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L4-message">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="L3-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" target="L4-date">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="L4-feed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9673a6;fontSize=9;" target="L5-bus" value="publish">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="L4-date" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9673a6;fontSize=9;" target="L5-bus" value="publish">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="L4-message" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9673a6;fontSize=9;" target="L5-bus" value="publish">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;" target="L5-chap">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;" target="L5-transcript">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;" target="L5-score">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;" target="L5-notif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;" target="L5-wsgw">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" edge="1" parent="1" source="L5-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#b85450;fontSize=9;" target="L2-ws" value="push event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" edge="1" parent="1" source="L3-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#6c8ebf;fontColor=#6c8ebf;" target="L3-authmw" value="validate JWT on connect">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" edge="1" parent="1" source="L3-authmw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#6c8ebf;fontColor=#6c8ebf;" target="L3-authz" value="check resource access">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" edge="1" parent="1" source="L3-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#6c8ebf;fontColor=#6c8ebf;" target="L3-wstopic" value="check subscribe/action role">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" edge="1" parent="1" source="L3-wstopic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#6c8ebf;fontColor=#6c8ebf;" target="L3-authz" value="reuse ownership policy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e26" edge="1" parent="1" source="L3-gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#9673a6;fontColor=#9673a6;" target="L3-rate" value="rate limit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e27" edge="1" parent="1" source="L3-gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#9673a6;fontColor=#9673a6;" target="L3-idemp" value="POST/PATCH idempotency">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e28" edge="1" parent="1" source="L3-gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#9673a6;fontColor=#9673a6;" target="L3-err" value="envelope errors">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e29" edge="1" parent="1" source="L4-auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#d79b00;fontColor=#d79b00;" target="L3-oauth" value="OAuth/OIDC + refresh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e30" edge="1" parent="1" source="L4-cred" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#d79b00;fontColor=#d79b00;" target="L3-agentauth" value="issue/revoke agent JWT">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e31" edge="1" parent="1" source="L5-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" target="L3-wsgw" value="emit topic event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e32" edge="1" parent="1" source="L3-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" target="L4-message" value="chat actions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e33" edge="1" parent="1" source="L3-wsgw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" target="L4-date" value="date actions">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e34" edge="1" parent="1" source="L4-date" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" target="L5-bus" value="DateMessageCreated / DateEnded">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e35" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" target="L5-wsgw" value="domain event -&gt; WS event">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e36" edge="1" parent="1" source="L5-bus" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" target="L5-chap" value="Date events for read-only view">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="note-chap" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=8;" value="Chaperone role on date.{dateId}&#xa;- may receive date_message / icebreaker / time_warning / date_ended&#xa;- may call end_date&#xa;- must NOT call send_date_message" vertex="1">
+          <mxGeometry height="120" width="360" x="2100" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="note-token" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=8;" value="Token decision&#xa;- OAuth/OIDC principal login&#xa;- access token = short-lived JWT&#xa;- refresh token = opaque rotating token&#xa;- agent token issued from AgentCredential" vertex="1">
+          <mxGeometry height="120" width="360" x="1650" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="note-flow" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=8;" value="WS event flow&#xa;EventBus → WebSocketGateway(sub) → WSGateway → WSTransport → PrincipalApp" vertex="1">
+          <mxGeometry height="95" width="360" x="2500" y="600" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
