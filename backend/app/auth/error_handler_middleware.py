@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -14,6 +15,19 @@ _STATUS_MAP: dict[type[Exception], tuple[int, str]] = {
     ValueError: (400, "BAD_REQUEST"),
     RuntimeError: (500, "INTERNAL_ERROR"),
 }
+
+
+def envelope(
+    data: Any = None,
+    meta: dict | None = None,
+    error: dict | None = None,
+) -> dict:
+    """표준 응답 봉투 포맷을 반환한다."""
+    return {
+        "data": data,
+        "meta": meta if meta is not None else {},
+        "error": error,
+    }
 
 
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):
