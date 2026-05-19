@@ -13,8 +13,13 @@ export function AgentCreatePage() {
   const navigate = useNavigate();
 
   const handleSubmit = (values: ProfileFormValues) => {
+    const windows = values.activeDays.map((day) => ({
+      day,
+      start: values.activeStart,
+      end: values.activeEnd,
+    }));
     // Visual demo only — real POST /agents lands in a follow-up V1 mutation ticket.
-    console.info("[AgentCreate] submit", values);
+    console.info("[AgentCreate] submit", { ...values, availabilityWindows: windows });
     navigate("/agents");
   };
 

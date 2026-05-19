@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Search, Star } from "lucide-react";
+import { Menu, Search, Star } from "lucide-react";
 import { useLiveDate } from "@/api/endpoints/dates";
 import { useTopic } from "@/api/ws/hooks";
 import { topics, type DateTopicEvent } from "@/api/ws/topics";
@@ -9,6 +9,7 @@ import { useAuth } from "@/store/auth";
 import { MessageBubble } from "@/design-system/components/MessageBubble";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
+import { ConversationMenuSheet } from "@/features/conversation/components/ConversationMenuSheet";
 import { RatingSheet } from "./components/RatingSheet";
 
 type LiveMessage = {
@@ -29,6 +30,7 @@ export function DateLivePage() {
   const { activeAgentId } = useAuth();
   const query = useLiveDate(dateId);
   const [showRating, setShowRating] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [streamed, setStreamed] = useState<LiveMessage[]>([]);
   useEffect(() => setStreamed([]), [dateId]);
@@ -63,6 +65,14 @@ export function DateLivePage() {
                   >
                     <Search className="w-4 h-4" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-label="Open date menu"
+                    className="grid place-items-center w-9 h-9 rounded-full text-text hover:bg-surface-2"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
                 </>
               }
             />
@@ -88,6 +98,11 @@ export function DateLivePage() {
               open={showRating}
               onOpenChange={setShowRating}
               partnerName={data.partnerAgent.displayName}
+            />
+            <ConversationMenuSheet
+              open={menuOpen}
+              onOpenChange={setMenuOpen}
+              partnerAgentId={data.partnerAgent.agentId}
             />
           </>
         );

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import * as Slider from "@radix-ui/react-slider";
 import { ChevronDown, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import type { AvailabilityWindow } from "@/api/types";
 
 export const ALL_CAPABILITY_TAGS = [
   "Analyze",
@@ -26,6 +27,16 @@ export const BASE_MODELS = [
   { value: "ChatGPT-4", label: "ChatGPT-4" },
 ] as const;
 
+export const WEEKDAYS: Array<AvailabilityWindow["day"]> = [
+  "MON",
+  "TUE",
+  "WED",
+  "THU",
+  "FRI",
+  "SAT",
+  "SUN",
+];
+
 export type ProfileFormValues = {
   baseModel: string;
   apiKey: string;
@@ -35,6 +46,10 @@ export type ProfileFormValues = {
   capabilityTags: string[];
   styleCasual: number;
   styleDetail: number;
+  styleBold: number;
+  activeDays: Array<AvailabilityWindow["day"]>;
+  activeStart: string;
+  activeEnd: string;
 };
 
 export const DEFAULT_VALUES: ProfileFormValues = {
@@ -46,6 +61,10 @@ export const DEFAULT_VALUES: ProfileFormValues = {
   capabilityTags: [],
   styleCasual: 50,
   styleDetail: 50,
+  styleBold: 50,
+  activeDays: [],
+  activeStart: "09:00",
+  activeEnd: "18:00",
 };
 
 const MAX_NAME = 16;
@@ -82,6 +101,15 @@ export function ProfileForm({
       if (prev.capabilityTags.length >= MAX_TAGS) return prev;
       return { ...prev, capabilityTags: [...prev.capabilityTags, tag] };
     });
+  };
+
+  const toggleDay = (day: AvailabilityWindow["day"]) => {
+    setValues((prev) => ({
+      ...prev,
+      activeDays: prev.activeDays.includes(day)
+        ? prev.activeDays.filter((d) => d !== day)
+        : [...prev.activeDays, day],
+    }));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -202,6 +230,53 @@ export function ProfileForm({
           value={values.styleDetail}
           onChange={(v) => update("styleDetail", v)}
         />
+        <StyleSlider
+          label="Bold"
+          value={values.styleBold}
+          onChange={(v) => update("styleBold", v)}
+        />
+      </FormCard>
+
+      <FormCard>
+        <div className="text-xs text-text-muted mb-2">Active time</div>
+        <div className="flex gap-1.5 mb-3">
+          {WEEKDAYS.map((day) => {
+            const selected = values.activeDays.includes(day);
+            return (
+              <button
+                key={day}
+                type="button"
+                onClick={() => toggleDay(day)}
+                aria-pressed={selected}
+                className={cn(
+                  "flex-1 rounded-full py-1.5 text-[11px] font-semibold transition-colors",
+                  selected
+                    ? "bg-primary text-primary-fg"
+                    : "bg-surface-2 text-text-muted",
+                )}
+              >
+                {day[0] + day.slice(1).toLowerCase()}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <input
+            type="time"
+            value={values.activeStart}
+            onChange={(e) => update("activeStart", e.target.value)}
+            className="flex-1 rounded-lg bg-surface-2 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
+            aria-label="Active time start"
+          />
+          <span className="text-text-subtle">~</span>
+          <input
+            type="time"
+            value={values.activeEnd}
+            onChange={(e) => update("activeEnd", e.target.value)}
+            className="flex-1 rounded-lg bg-surface-2 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
+            aria-label="Active time end"
+          />
+        </div>
       </FormCard>
     </form>
   );

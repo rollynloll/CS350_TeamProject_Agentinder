@@ -1,13 +1,18 @@
-import { useState } from "react";
 import { ALL_CAPABILITY_TAGS } from "@/features/agents/components/ProfileForm";
 import { cn } from "@/lib/cn";
 
-export function DiscoverFilters() {
-  const [selected, setSelected] = useState<string[]>(["Optimize", "Plan"]);
-
+export function DiscoverFilters({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
   const toggle = (tag: string) =>
-    setSelected((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    onChange(
+      selected.includes(tag)
+        ? selected.filter((t) => t !== tag)
+        : [...selected, tag],
     );
 
   return (
@@ -16,7 +21,7 @@ export function DiscoverFilters() {
         <div className="text-sm font-semibold text-text">Capability Tags</div>
         <button
           type="button"
-          onClick={() => setSelected([])}
+          onClick={() => onChange([])}
           className="text-xs font-medium text-text-subtle hover:text-text"
         >
           Reset

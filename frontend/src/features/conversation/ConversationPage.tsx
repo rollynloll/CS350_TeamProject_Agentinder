@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { useConversation } from "@/api/endpoints/messages";
 import { useTopic } from "@/api/ws/hooks";
 import { topics, type ChatTopicEvent } from "@/api/ws/topics";
@@ -10,6 +10,7 @@ import { MessageBubble } from "@/design-system/components/MessageBubble";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { ChatInput } from "./components/ChatInput";
+import { ConversationMenuSheet } from "./components/ConversationMenuSheet";
 
 export function ConversationPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -17,6 +18,7 @@ export function ConversationPage() {
   const query = useConversation(matchId);
 
   const [live, setLive] = useState<ChatMessage[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => setLive([]), [matchId]);
 
   const onFrame = useCallback((frame: WsFrame) => {
@@ -63,6 +65,14 @@ export function ConversationPage() {
                   >
                     <Search className="w-4 h-4" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-label="Open conversation menu"
+                    className="grid place-items-center w-9 h-9 rounded-full text-text hover:bg-surface-2"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
                 </>
               }
             />
@@ -83,6 +93,12 @@ export function ConversationPage() {
               )}
             </div>
             <ChatInput onSubmit={handleSend} />
+            <ConversationMenuSheet
+              open={menuOpen}
+              onOpenChange={setMenuOpen}
+              partnerAgentId={data.matchInfo.partnerAgent.agentId}
+              matchId={data.matchInfo.matchId}
+            />
           </>
         );
       }}

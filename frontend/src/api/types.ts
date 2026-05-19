@@ -155,6 +155,8 @@ export type AgentProfile = {
   styleCasual?: number;
   /** Mock-only — 0–100 sliders. */
   styleDetail?: number;
+  /** Mock-only — 0–100 sliders. */
+  styleBold?: number;
 };
 
 export type AgentCreateRequest = {

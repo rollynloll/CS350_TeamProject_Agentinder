@@ -15,6 +15,12 @@ import { DateHistoryPage } from "./features/date-history/DateHistoryPage";
 import { DateLivePage } from "./features/date-live/DateLivePage";
 import { RelationshipsPage } from "./features/relationships/RelationshipsPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
+import { AccountPage } from "./features/settings/AccountPage";
+import { ApiKeysPage } from "./features/settings/ApiKeysPage";
+import { NoticePage } from "./features/settings/NoticePage";
+import { PrivacyPage } from "./features/settings/PrivacyPage";
+import { TrustThresholdPage } from "./features/settings/TrustThresholdPage";
+import { AutoMatchPage } from "./features/settings/AutoMatchPage";
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +43,12 @@ export const router = createBrowserRouter([
       { path: "/dates/:dateId", element: <DateLivePage /> },
       { path: "/relationships", element: <RelationshipsPage /> },
       { path: "/settings", element: <SettingsPage /> },
+      { path: "/settings/account", element: <AccountPage /> },
+      { path: "/settings/api-keys", element: <ApiKeysPage /> },
+      { path: "/settings/notice", element: <NoticePage /> },
+      { path: "/settings/privacy", element: <PrivacyPage /> },
+      { path: "/settings/trust-threshold", element: <TrustThresholdPage /> },
+      { path: "/settings/auto-match", element: <AutoMatchPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
