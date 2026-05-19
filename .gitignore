@@ -1,0 +1,5 @@
+/backend/dev_flow_v1.md
+__pycache__/
+*.pyc
+*.pyo
+backend/.env

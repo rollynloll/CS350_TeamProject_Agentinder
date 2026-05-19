@@ -1,0 +1,205 @@
+from __future__ import annotations
+
+from typing import Any
+from uuid import UUID
+
+import asyncpg
+
+from .config import settings
+
+_pool: asyncpg.Pool | None = None
+
+
+async def init_pool() -> None:
+    global _pool
+    _pool = await asyncpg.create_pool(settings.database_url, min_size=2, max_size=10)
+
+
+async def close_pool() -> None:
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
+
+
+def get_pool() -> asyncpg.Pool:
+    if _pool is None:
+        raise RuntimeError("DB pool not initialised")
+    return _pool
+
+
+# ── Swipes ────────────────────────────────────────────────────────────────
+
+async def insert_swipe(agent_id: UUID, target_id: UUID, direction: str) -> None:
+    await get_pool().execute(
+        "INSERT INTO swipes (agent_id, target_id, direction)"
+        " VALUES ($1, $2, $3::swipe_enum) ON CONFLICT (agent_id, target_id) DO NOTHING",
+        agent_id, target_id, direction,
+    )
+
+
+async def get_counter_swipe(agent_id: UUID, target_id: UUID) -> asyncpg.Record | None:
+    """target_id 가 agent_id 를 오른쪽/위로 스와이프한 기록이 있으면 반환."""
+    return await get_pool().fetchrow(
+        "SELECT * FROM swipes WHERE agent_id = $1 AND target_id = $2 AND direction != 'left'",
+        target_id, agent_id,
+    )
+
+
+# ── Matches ───────────────────────────────────────────────────────────────
+
+async def insert_match(agent_a_id: UUID, agent_b_id: UUID) -> asyncpg.Record | None:
+    return await get_pool().fetchrow(
+        "INSERT INTO matches (agent_a_id, agent_b_id) VALUES ($1, $2)"
+        " ON CONFLICT (agent_a_id, agent_b_id) DO NOTHING RETURNING *",
+        agent_a_id, agent_b_id,
+    )
+
+
+async def get_match(match_id: UUID) -> asyncpg.Record | None:
+    return await get_pool().fetchrow(
+        "SELECT * FROM matches WHERE match_id = $1", match_id
+    )
+
+
+async def get_match_by_agents(agent_a_id: UUID, agent_b_id: UUID) -> asyncpg.Record | None:
+    return await get_pool().fetchrow(
+        "SELECT * FROM matches"
+        " WHERE (agent_a_id = $1 AND agent_b_id = $2)"
+        "    OR (agent_a_id = $2 AND agent_b_id = $1)",
+        agent_a_id, agent_b_id,
+    )
+
+
+async def get_matches_for_agent(agent_id: UUID, status: str | None = None) -> list[asyncpg.Record]:
+    if status:
+        return await get_pool().fetch(
+            "SELECT * FROM matches"
+            " WHERE (agent_a_id = $1 OR agent_b_id = $1) AND status = $2::match_status_enum"
+            " ORDER BY created_at DESC",
+            agent_id, status,
+        )
+    return await get_pool().fetch(
+        "SELECT * FROM matches WHERE agent_a_id = $1 OR agent_b_id = $1 ORDER BY created_at DESC",
+        agent_id,
+    )
+
+
+async def update_match_status(match_id: UUID, status: str) -> None:
+    await get_pool().execute(
+        "UPDATE matches SET status = $1::match_status_enum WHERE match_id = $2",
+        status, match_id,
+    )
+
+
+# ── Dates ─────────────────────────────────────────────────────────────────
+
+async def insert_date(match_id: UUID, date_type: str | None = None, scheduled_at: Any = None) -> asyncpg.Record:
+    return await get_pool().fetchrow(
+        "INSERT INTO dates (match_id, type, scheduled_at) VALUES ($1, $2, $3) RETURNING *",
+        match_id, date_type, scheduled_at,
+    )
+
+
+async def get_date(date_id: UUID) -> asyncpg.Record | None:
+    return await get_pool().fetchrow(
+        "SELECT * FROM dates WHERE date_id = $1", date_id
+    )
+
+
+async def get_dates_for_match(match_id: UUID) -> list[asyncpg.Record]:
+    return await get_pool().fetch(
+        "SELECT * FROM dates WHERE match_id = $1 ORDER BY created_at DESC", match_id
+    )
+
+
+async def start_date(date_id: UUID) -> None:
+    await get_pool().execute(
+        "UPDATE dates SET started_at = now() WHERE date_id = $1", date_id
+    )
+
+
+async def end_date(date_id: UUID, outcome: str | None, is_noshow: bool = False) -> None:
+    await get_pool().execute(
+        "UPDATE dates SET ended_at = now(), outcome = $2, is_noshow = $3 WHERE date_id = $1",
+        date_id, outcome, is_noshow,
+    )
+
+
+# ── Messages ──────────────────────────────────────────────────────────────
+
+async def insert_message(match_id: UUID, sender_agent_id: UUID, content: str) -> asyncpg.Record:
+    return await get_pool().fetchrow(
+        "INSERT INTO messages (match_id, sender_agent_id, content) VALUES ($1, $2, $3) RETURNING *",
+        match_id, sender_agent_id, content,
+    )
+
+
+async def get_messages(
+    match_id: UUID, limit: int = 50, before_id: UUID | None = None
+) -> list[asyncpg.Record]:
+    if before_id:
+        cursor_row = await get_pool().fetchrow(
+            "SELECT created_at FROM messages WHERE message_id = $1", before_id
+        )
+        if cursor_row:
+            return await get_pool().fetch(
+                "SELECT * FROM messages WHERE match_id = $1 AND created_at < $2"
+                " ORDER BY created_at DESC LIMIT $3",
+                match_id, cursor_row["created_at"], limit,
+            )
+    return await get_pool().fetch(
+        "SELECT * FROM messages WHERE match_id = $1 ORDER BY created_at DESC LIMIT $2",
+        match_id, limit,
+    )
+
+
+async def mark_messages_read(match_id: UUID, reader_agent_id: UUID) -> None:
+    await get_pool().execute(
+        "UPDATE messages SET is_read = true"
+        " WHERE match_id = $1 AND sender_agent_id != $2 AND is_read = false",
+        match_id, reader_agent_id,
+    )
+
+
+# ── Agents / Principals (B 소유 테이블 — 읽기 전용) ───────────────────────
+
+async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
+    return await get_pool().fetchrow(
+        "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.capability_embedding IS NOT NULL AS has_embedding"
+        " FROM agents a JOIN agent_profiles ap USING (agent_id)"
+        " WHERE a.agent_id = $1",
+        agent_id,
+    )
+
+
+async def get_all_visible_agents(exclude_agent_id: UUID) -> list[asyncpg.Record]:
+    return await get_pool().fetch(
+        "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.capability_embedding IS NOT NULL AS has_embedding"
+        " FROM agents a JOIN agent_profiles ap USING (agent_id)"
+        " WHERE a.agent_id != $1 AND ap.is_suspended = false AND ap.visibility != 'hidden'",
+        exclude_agent_id,
+    )
+
+
+async def get_principal_agents(principal_id: UUID) -> list[asyncpg.Record]:
+    return await get_pool().fetch(
+        "SELECT a.agent_id, ap.display_name, ap.visibility, ap.tier_badge,"
+        " ap.avatar_url, a.created_at"
+        " FROM agents a JOIN agent_profiles ap USING (agent_id)"
+        " WHERE a.principal_id = $1 ORDER BY a.created_at DESC",
+        principal_id,
+    )
+
+
+async def get_principal_row(principal_id: UUID) -> asyncpg.Record | None:
+    return await get_pool().fetchrow(
+        "SELECT p.principal_id, p.created_at, pp.email, pp.name, pp.plan, pp.mfa_enabled"
+        " FROM principals p JOIN principal_profiles pp USING (principal_id)"
+        " WHERE p.principal_id = $1",
+        principal_id,
+    )
