@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useDiscover } from "@/api/endpoints/discover";
 import { useAuth } from "@/store/auth";
-import { PageHeader } from "@/design-system/components/PageHeader";
-import { PageScroll } from "@/design-system/components/PageScroll";
+import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
-import { SwipeCard } from "@/design-system/components/SwipeCard";
+import { DiscoverFilters } from "./components/DiscoverFilters";
+import { DiscoverResultCard } from "./components/DiscoverResultCard";
 
 export function DiscoverPage() {
   const { t } = useTranslation();
@@ -12,22 +12,20 @@ export function DiscoverPage() {
   const query = useDiscover(activeAgentId ?? undefined);
 
   return (
-    <PageScroll>
-      <PageHeader title={t("discover.title")} description={t("discover.description")} />
-      <QueryBoundary query={query}>
-        {(data) => (
-          <>
-            <div className="text-sm text-text-muted mb-3">
-              Total results: {data.totalResults}
-            </div>
-            <div className="space-y-4">
+    <>
+      <MobileHeader title={t("discover.title")} />
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-6 space-y-4">
+        <DiscoverFilters />
+        <QueryBoundary query={query}>
+          {(data) => (
+            <div className="space-y-3">
               {data.cards.map((card) => (
-                <SwipeCard key={card.agentId} card={card} />
+                <DiscoverResultCard key={card.agentId} card={card} />
               ))}
             </div>
-          </>
-        )}
-      </QueryBoundary>
-    </PageScroll>
+          )}
+        </QueryBoundary>
+      </div>
+    </>
   );
 }

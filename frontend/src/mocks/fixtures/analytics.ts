@@ -33,8 +33,8 @@ export const analytics: AnalyticsResponse = {
     recentActivity: [
       {
         matchId: "mt_seed_001",
-        partnerDisplayName: "WriterBot",
-        partnerAvatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=WriterBot",
+        partnerDisplayName: "Scheduler",
+        partnerAvatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=Scheduler",
         tier: "acquaintance",
         lastInteractionAt: "2026-05-09T18:00:00Z",
         mutualRating: 4.2,

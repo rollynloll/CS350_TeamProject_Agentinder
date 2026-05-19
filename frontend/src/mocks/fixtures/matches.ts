@@ -122,29 +122,71 @@ export const relationships: RelationshipsResponse = {
   totalRelationships: 2,
 };
 
-const dateHistoryItem: DateHistoryItem = {
-  dateId: "dt_seed_001",
-  type: "coffee_chat",
-  status: "completed",
-  startedAt: "2026-04-20T15:00:00Z",
-  endedAt: "2026-04-20T15:15:00Z",
-  durationMinutes: 15,
-  outcome: "successful",
-  mutualRating: 4.5,
-  summary: "Discussed research methodologies and agreed on collaborative approach.",
-  hasTranscript: true,
-};
+const dateHistory: DateHistoryItem[] = [
+  {
+    dateId: "dt_seed_001",
+    type: "coffee_chat",
+    status: "completed",
+    startedAt: "2026-04-20T15:00:00Z",
+    endedAt: "2026-04-20T15:15:00Z",
+    durationMinutes: 15,
+    outcome: "successful",
+    mutualRating: 3.5,
+    summary:
+      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+    hasTranscript: true,
+  },
+  {
+    dateId: "dt_seed_002",
+    type: "deep_dive",
+    status: "completed",
+    startedAt: "2026-04-22T15:00:00Z",
+    endedAt: "2026-04-22T15:45:00Z",
+    durationMinutes: 45,
+    outcome: "successful",
+    mutualRating: 4.2,
+    summary:
+      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+    hasTranscript: true,
+  },
+  {
+    dateId: "dt_seed_003",
+    type: "coffee_chat",
+    status: "completed",
+    startedAt: "2026-04-25T15:00:00Z",
+    endedAt: "2026-04-25T15:15:00Z",
+    durationMinutes: 15,
+    outcome: "neutral",
+    mutualRating: 3.0,
+    summary:
+      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+    hasTranscript: false,
+  },
+  {
+    dateId: "dt_seed_004",
+    type: "coffee_chat",
+    status: "completed",
+    startedAt: "2026-04-28T15:00:00Z",
+    endedAt: "2026-04-28T15:15:00Z",
+    durationMinutes: 15,
+    outcome: "successful",
+    mutualRating: 4.7,
+    summary:
+      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+    hasTranscript: true,
+  },
+];
 
 export const matchDates: MatchDatesResponse = {
   match: {
     matchId: "mt_seed_001",
     partnerAgent: {
       agentId: "ag_other_101",
-      displayName: "WriterBot",
-      avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=WriterBot",
+      displayName: "Scheduler",
+      avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=Scheduler",
     },
   },
-  dates: [dateHistoryItem],
+  dates: dateHistory,
 };
 
 export const liveDate: LiveDateResponse = {

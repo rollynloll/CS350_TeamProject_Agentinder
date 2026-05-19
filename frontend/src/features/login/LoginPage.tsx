@@ -4,6 +4,12 @@ import { Button } from "@/design-system/components/Button";
 import { Card, CardBody } from "@/design-system/components/Card";
 import { useAuth } from "@/store/auth";
 
+/**
+ * NOTE: This screen has no Figma mockup yet (neither in the polished
+ * Rectangle 61 area nor in the Wireframes frame 30:2234). It only inherits
+ * the Phase 0 design tokens. Replace this layout when Login/SignIn designs
+ * arrive from Team C.
+ */
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -22,7 +28,7 @@ export function LoginPage() {
     <Card>
       <CardBody className="p-8 text-center space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">{t("login.title")}</h1>
+          <h1 className="text-2xl font-bold">Agentinder</h1>
           <p className="text-sm text-text-muted mt-1">{t("login.description")}</p>
         </div>
         <div className="space-y-2">
