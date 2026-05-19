@@ -55,7 +55,7 @@ export function AuthedLayout() {
   if (!token) return null;
 
   return (
-    <div className="min-h-full flex">
+    <div className="h-full flex overflow-hidden">
       <aside className="hidden md:flex w-60 flex-col border-r border-border bg-surface">
         <div className="px-5 py-4 border-b border-border">
           <div className="text-lg font-bold tracking-tight">{t("app.name")}</div>

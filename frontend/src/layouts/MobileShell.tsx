@@ -15,7 +15,7 @@ export function MobileShell({
   className?: string;
 }) {
   return (
-    <div className="flex-1 min-h-0 self-stretch md:bg-surface-2/40 md:py-6 md:px-4 flex justify-center">
+    <div className="flex-1 min-h-0 self-stretch md:bg-surface-2/40 md:py-6 md:px-4 flex justify-center overflow-hidden">
       <div
         className={cn(
           "relative w-full h-full flex flex-col bg-bg overflow-hidden",

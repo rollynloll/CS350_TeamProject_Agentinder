@@ -9,6 +9,9 @@
   body,
   #root {
     height: 100%;
+    /* Dynamic viewport unit gives the real visible height on mobile browsers
+       once the address bar collapses, so the BottomNav can stay pinned. */
+    height: 100dvh;
   }
   body {
     font-family: var(--font-sans);
@@ -17,6 +20,9 @@
     font-feature-settings: "cv11", "ss01";
     background-color: var(--color-bg);
     color: var(--color-text);
+    /* Prevent document-level scroll — only the inner main can scroll. */
+    overflow: hidden;
+    overscroll-behavior-y: none;
   }
   *:focus-visible {
     outline: 2px solid var(--color-primary);
