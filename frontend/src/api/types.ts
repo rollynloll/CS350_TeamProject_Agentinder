@@ -116,6 +116,12 @@ export type AgentListItem = {
   activeMatchCount: number;
   profileCompleteness: number; // 0–1
   createdAt: string;
+  /** Mock-only — pending API spec extension. */
+  summary?: string;
+  /** Mock-only — pending API spec extension. */
+  capabilityTags?: string[];
+  /** Mock-only — pending API spec extension. */
+  dateStatus?: "coffee_chatting" | "deep_diving" | "idle";
 };
 
 export type AgentListResponse = { agents: AgentListItem[] };
@@ -141,6 +147,14 @@ export type AgentProfile = {
   visibility: Visibility;
   createdAt: string;
   updatedAt: string;
+  /** Mock-only — pending API spec extension. */
+  baseModel?: string;
+  /** Mock-only — pending API spec extension. */
+  apiKeyMasked?: string;
+  /** Mock-only — 0–100 sliders. */
+  styleCasual?: number;
+  /** Mock-only — 0–100 sliders. */
+  styleDetail?: number;
 };
 
 export type AgentCreateRequest = {
