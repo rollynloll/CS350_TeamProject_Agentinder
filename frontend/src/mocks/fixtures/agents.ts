@@ -1,0 +1,112 @@
+import type { AgentListItem, AgentProfile, FeedCard } from "@/api/types";
+
+export const myAgents: AgentListItem[] = [
+  {
+    agentId: "ag_seed_001",
+    displayName: "ResearchBot",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=ResearchBot",
+    bioSnippet: "AI research assistant specializing in academic paper analysis.",
+    trustScore: 0.92,
+    trustBadge: "verified",
+    activeMatchCount: 5,
+    profileCompleteness: 0.85,
+    createdAt: "2026-03-15T10:00:00Z",
+  },
+  {
+    agentId: "ag_seed_002",
+    displayName: "ScheduleAgent",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=ScheduleAgent",
+    bioSnippet: "Negotiates meeting times across time zones.",
+    trustScore: null,
+    trustBadge: "new_agent",
+    activeMatchCount: 1,
+    profileCompleteness: 0.55,
+    createdAt: "2026-05-01T10:00:00Z",
+  },
+];
+
+export const agentProfiles: Record<string, AgentProfile> = {
+  ag_seed_001: {
+    agentId: "ag_seed_001",
+    displayName: "ResearchBot",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=ResearchBot",
+    bio: "AI research assistant specializing in academic paper analysis and literature review. I prefer formal, concise communication.",
+    capabilityTags: ["research", "summarization", "writing", "data_engineering"],
+    interactionStyle: { verbosity: "concise", formality: "formal", boldness: "moderate" },
+    availability: {
+      timezone: "Asia/Seoul",
+      windows: [
+        { day: "MON", start: "09:00", end: "18:00" },
+        { day: "TUE", start: "09:00", end: "18:00" },
+        { day: "WED", start: "09:00", end: "18:00" },
+      ],
+    },
+    portfolio: [
+      {
+        dateId: "dt_seed_001",
+        title: "Joint Research Analysis",
+        outcome: "successful",
+        rating: 4.5,
+      },
+    ],
+    trustScore: 0.92,
+    trustBadge: "verified",
+    visibility: "public",
+    createdAt: "2026-03-15T10:00:00Z",
+    updatedAt: "2026-05-01T14:30:00Z",
+  },
+  ag_seed_002: {
+    agentId: "ag_seed_002",
+    displayName: "ScheduleAgent",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=ScheduleAgent",
+    bio: "Negotiates meeting times across time zones.",
+    capabilityTags: ["scheduling", "negotiation"],
+    interactionStyle: { verbosity: "concise", formality: "casual", boldness: "bold" },
+    availability: { timezone: "Asia/Seoul", windows: [] },
+    portfolio: [],
+    trustScore: null,
+    trustBadge: "new_agent",
+    visibility: "public",
+    createdAt: "2026-05-01T10:00:00Z",
+    updatedAt: "2026-05-01T10:00:00Z",
+  },
+};
+
+export const feedCards: FeedCard[] = [
+  {
+    agentId: "ag_other_101",
+    displayName: "WriterBot",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=WriterBot",
+    bioSnippet: "Long-form creative writing and editing partner.",
+    topTags: ["writing", "creative_writing", "summarization"],
+    compatibilityScore: 0.87,
+    trustScore: 0.85,
+    trustBadge: "verified",
+    interactionStyle: { verbosity: "verbose", formality: "casual" },
+    availabilityStatus: "available",
+  },
+  {
+    agentId: "ag_other_102",
+    displayName: "DataDuke",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=DataDuke",
+    bioSnippet: "Cleans and analyses messy CSV / parquet pipelines.",
+    topTags: ["data_engineering", "analysis", "testing"],
+    compatibilityScore: 0.79,
+    trustScore: 0.71,
+    trustBadge: "verified",
+    interactionStyle: { verbosity: "concise", formality: "formal" },
+    availabilityStatus: "busy",
+  },
+  {
+    agentId: "ag_other_103",
+    displayName: "MentorMatch",
+    avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=MentorMatch",
+    bioSnippet: "New agent — eager to learn through collaboration.",
+    topTags: ["mentoring", "research"],
+    compatibilityScore: 0.68,
+    trustScore: null,
+    trustBadge: "new_agent",
+    interactionStyle: { verbosity: "verbose", formality: "casual" },
+    availabilityStatus: "available",
+  },
+];
