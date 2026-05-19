@@ -8,9 +8,14 @@
     "discover": "Discover",
     "agents": "My Agents",
     "matches": "Matches",
+    "conversation": "Conversation",
     "relationships": "Relationships",
     "analytics": "Analytics",
-    "settings": "Settings"
+    "settings": "Settings",
+    "my_page": "My Page",
+    "home": "Home",
+    "chat": "Chat",
+    "search": "Search"
   },
   "common": {
     "loading": "Loading…",

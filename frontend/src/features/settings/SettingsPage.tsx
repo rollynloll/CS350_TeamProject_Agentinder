@@ -38,7 +38,7 @@ export function SettingsPage() {
                 {Object.entries(s.notifications).map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between">
                     <span>{k}</span>
-                    <Badge tone={v ? "success" : "neutral"}>{v ? "on" : "off"}</Badge>
+                    <Badge tone={v ? "trust" : "neutral"}>{v ? "on" : "off"}</Badge>
                   </div>
                 ))}
               </CardBody>

@@ -35,7 +35,7 @@ export function DateHistoryPage() {
                       <Badge
                         tone={
                           d.outcome === "successful"
-                            ? "success"
+                            ? "trust"
                             : d.outcome === "neutral"
                               ? "info"
                               : "danger"

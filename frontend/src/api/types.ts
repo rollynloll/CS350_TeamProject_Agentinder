@@ -60,6 +60,8 @@ export type FeedCard = {
   trustBadge: "new_agent" | "verified" | string;
   interactionStyle: InteractionStyle;
   availabilityStatus: "available" | "busy" | "offline";
+  /** Mock-only callout for Feed Main00 — pending API spec update with Team A. */
+  superLikedYou?: boolean;
 };
 
 export type PartnerAgent = {

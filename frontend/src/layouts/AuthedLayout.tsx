@@ -16,8 +16,10 @@ import { wsClient } from "@/api/ws/client";
 import { useWsStatus } from "@/api/ws/hooks";
 import { cn } from "@/lib/cn";
 import { topics } from "@/api/ws/topics";
+import { MobileShell } from "./MobileShell";
+import { BottomNav } from "@/design-system/components/BottomNav";
 
-const navItems = [
+const sidebarItems = [
   { to: "/", icon: Sparkles, key: "feed" },
   { to: "/discover", icon: Compass, key: "discover" },
   { to: "/agents", icon: UserSquare2, key: "agents" },
@@ -34,7 +36,6 @@ export function AuthedLayout() {
   const { token, activeAgentId } = useAuth();
   const wsStatus = useWsStatus();
 
-  // Connect WS once on mount; subscribe to per-agent matches topic.
   useEffect(() => {
     if (!token) {
       navigate("/login", { replace: true });
@@ -47,8 +48,7 @@ export function AuthedLayout() {
   useEffect(() => {
     if (!activeAgentId) return;
     return wsClient.subscribe(topics.matches(activeAgentId), () => {
-      // Real handler lives in features/matches; this layout-level subscribe just
-      // ensures the connection has at least one topic during the scaffold phase.
+      // Layout-level subscribe keeps the WS warm; feature pages own real handlers.
     });
   }, [activeAgentId]);
 
@@ -62,7 +62,7 @@ export function AuthedLayout() {
           <div className="text-xs text-text-muted">{t("app.tagline")}</div>
         </div>
         <nav className="flex-1 py-3 space-y-1">
-          {navItems.map((item) => (
+          {sidebarItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -87,7 +87,7 @@ export function AuthedLayout() {
             className={cn(
               "inline-flex items-center gap-1",
               wsStatus === "open"
-                ? "text-success"
+                ? "text-trust"
                 : wsStatus === "reconnecting"
                   ? "text-warning"
                   : "text-text-muted",
@@ -97,7 +97,7 @@ export function AuthedLayout() {
               className={cn(
                 "h-1.5 w-1.5 rounded-full",
                 wsStatus === "open"
-                  ? "bg-success"
+                  ? "bg-trust"
                   : wsStatus === "reconnecting"
                     ? "bg-warning"
                     : "bg-text-muted",
@@ -108,30 +108,12 @@ export function AuthedLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">
+      <MobileShell>
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
-        </div>
-      </main>
-
-      <nav className="md:hidden fixed bottom-0 inset-x-0 border-t border-border bg-surface flex justify-around py-2">
-        {navItems.slice(0, 5).map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            className={({ isActive }) =>
-              cn(
-                "flex flex-col items-center text-[10px] px-2 py-1 rounded-md",
-                isActive ? "text-primary" : "text-text-muted",
-              )
-            }
-          >
-            <item.icon className="w-5 h-5 mb-0.5" />
-            {t(`nav.${item.key}` as const, { defaultValue: item.key })}
-          </NavLink>
-        ))}
-      </nav>
+        </main>
+        <BottomNav />
+      </MobileShell>
     </div>
   );
 }
