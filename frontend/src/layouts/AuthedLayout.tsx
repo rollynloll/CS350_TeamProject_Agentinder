@@ -109,7 +109,7 @@ export function AuthedLayout() {
       </aside>
 
       <MobileShell>
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto px-4 py-4">
           <Outlet />
         </main>
         <BottomNav />
