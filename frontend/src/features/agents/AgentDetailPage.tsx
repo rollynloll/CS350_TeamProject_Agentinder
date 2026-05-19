@@ -6,6 +6,7 @@ import { Badge } from "@/design-system/components/Badge";
 import { Button } from "@/design-system/components/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/design-system/components/Card";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { TrustBadge } from "@/design-system/components/TrustBadge";
 
@@ -15,7 +16,7 @@ export function AgentDetailPage() {
   const query = useAgentProfile(agentId);
 
   return (
-    <>
+    <PageScroll>
       <QueryBoundary query={query}>
         {(profile) => (
           <>
@@ -51,6 +52,6 @@ export function AgentDetailPage() {
           </>
         )}
       </QueryBoundary>
-    </>
+    </PageScroll>
   );
 }

@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { Search } from "lucide-react";
 import { useConversation } from "@/api/endpoints/messages";
 import { useTopic } from "@/api/ws/hooks";
 import { topics, type ChatTopicEvent } from "@/api/ws/topics";
 import type { ChatMessage, WsFrame } from "@/api/types";
-import { Card, CardBody } from "@/design-system/components/Card";
-import { PageHeader } from "@/design-system/components/PageHeader";
+import { useAuth } from "@/store/auth";
+import { MessageBubble } from "@/design-system/components/MessageBubble";
+import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
-import { TierBadge } from "@/design-system/components/TierBadge";
+import { ChatInput } from "./components/ChatInput";
 
 export function ConversationPage() {
-  const { t } = useTranslation();
   const { matchId } = useParams<{ matchId: string }>();
+  const { activeAgentId } = useAuth();
   const query = useConversation(matchId);
 
   const [live, setLive] = useState<ChatMessage[]>([]);
@@ -26,38 +27,65 @@ export function ConversationPage() {
   }, []);
   useTopic(matchId ? topics.chat(matchId) : null, onFrame);
 
+  const handleSend = (text: string) => {
+    if (!activeAgentId) return;
+    const optimistic: ChatMessage = {
+      messageId: `local_${Date.now()}`,
+      senderId: activeAgentId,
+      type: "text",
+      content: text,
+      sentAt: new Date().toISOString(),
+      readAt: null,
+    };
+    setLive((prev) => [...prev, optimistic]);
+  };
+
   return (
-    <>
-      <PageHeader title={t("conversation.title")} />
-      <QueryBoundary query={query}>
-        {(data) => {
-          const merged: ChatMessage[] = [...data.messages, ...live];
-          return (
-            <Card>
-              <CardBody className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">
-                    {data.matchInfo.partnerAgent.displayName}
-                  </div>
-                  <TierBadge tier={data.matchInfo.tier} />
+    <QueryBoundary query={query}>
+      {(data) => {
+        // Coffee Chat vs Date pill — stand-in until API spec adds activeDateType.
+        const pillLabel = data.matchInfo.canScheduleDate ? "Coffee Chat" : "Date";
+        const merged: ChatMessage[] = [...data.messages, ...live];
+        return (
+          <>
+            <MobileHeader
+              showBack
+              title={data.matchInfo.partnerAgent.displayName}
+              action={
+                <>
+                  <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-text shadow-card">
+                    {pillLabel}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Search in conversation"
+                    className="grid place-items-center w-9 h-9 rounded-full bg-surface text-text shadow-card"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                </>
+              }
+            />
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
+              {merged.length === 0 ? (
+                <div className="text-center text-sm text-text-subtle py-12">
+                  No messages yet.
                 </div>
-                <ul className="space-y-2">
-                  {merged.map((m) => (
-                    <li
-                      key={m.messageId}
-                      className="rounded-md bg-surface-2 px-3 py-2 text-sm"
-                    >
-                      <div className="text-xs text-text-muted">{m.senderId}</div>
-                      <div>{m.content}</div>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs text-text-muted">{t("common.scaffold_notice")}</p>
-              </CardBody>
-            </Card>
-          );
-        }}
-      </QueryBoundary>
-    </>
+              ) : (
+                merged.map((m) => (
+                  <MessageBubble
+                    key={m.messageId}
+                    mine={m.senderId === activeAgentId}
+                  >
+                    {m.content}
+                  </MessageBubble>
+                ))
+              )}
+            </div>
+            <ChatInput onSubmit={handleSend} />
+          </>
+        );
+      }}
+    </QueryBoundary>
   );
 }

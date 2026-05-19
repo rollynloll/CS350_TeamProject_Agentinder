@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useMatchDates } from "@/api/endpoints/relationships";
 import { Card, CardBody } from "@/design-system/components/Card";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { Badge } from "@/design-system/components/Badge";
 
@@ -12,7 +13,7 @@ export function DateHistoryPage() {
   const query = useMatchDates(matchId);
 
   return (
-    <>
+    <PageScroll>
       <PageHeader title={t("date_history.title")} />
       <QueryBoundary query={query}>
         {(data) => (
@@ -54,7 +55,6 @@ export function DateHistoryPage() {
           </div>
         )}
       </QueryBoundary>
-      <p className="text-xs text-text-muted mt-4">{t("common.scaffold_notice")}</p>
-    </>
+    </PageScroll>
   );
 }

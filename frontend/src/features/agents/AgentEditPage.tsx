@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAgentProfile } from "@/api/endpoints/agents";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { Card, CardBody } from "@/design-system/components/Card";
 
@@ -11,7 +12,7 @@ export function AgentEditPage() {
   const query = useAgentProfile(agentId);
 
   return (
-    <>
+    <PageScroll>
       <PageHeader title={t("agents.edit_title")} />
       <QueryBoundary query={query}>
         {(profile) => (
@@ -25,6 +26,6 @@ export function AgentEditPage() {
           </Card>
         )}
       </QueryBoundary>
-    </>
+    </PageScroll>
   );
 }

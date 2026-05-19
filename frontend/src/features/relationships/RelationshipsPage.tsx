@@ -4,6 +4,7 @@ import { useAuth } from "@/store/auth";
 import { Avatar } from "@/design-system/components/Avatar";
 import { Card, CardBody } from "@/design-system/components/Card";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { TierBadge } from "@/design-system/components/TierBadge";
 
@@ -13,7 +14,7 @@ export function RelationshipsPage() {
   const query = useRelationships(activeAgentId ?? undefined);
 
   return (
-    <>
+    <PageScroll>
       <PageHeader
         title={t("relationships.title")}
         description={t("relationships.description")}
@@ -52,6 +53,6 @@ export function RelationshipsPage() {
           </div>
         )}
       </QueryBoundary>
-    </>
+    </PageScroll>
   );
 }

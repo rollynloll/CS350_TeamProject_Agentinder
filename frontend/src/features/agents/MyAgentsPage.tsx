@@ -5,6 +5,7 @@ import { Avatar } from "@/design-system/components/Avatar";
 import { Button } from "@/design-system/components/Button";
 import { Card, CardBody } from "@/design-system/components/Card";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { TrustBadge } from "@/design-system/components/TrustBadge";
 
@@ -13,7 +14,7 @@ export function MyAgentsPage() {
   const query = useMyAgents();
 
   return (
-    <>
+    <PageScroll>
       <PageHeader
         title={t("agents.title")}
         description={t("agents.description")}
@@ -54,6 +55,6 @@ export function MyAgentsPage() {
           </div>
         )}
       </QueryBoundary>
-    </>
+    </PageScroll>
   );
 }

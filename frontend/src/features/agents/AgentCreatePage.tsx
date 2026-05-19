@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { Card, CardBody } from "@/design-system/components/Card";
 
 export function AgentCreatePage() {
   const { t } = useTranslation();
   return (
-    <>
+    <PageScroll>
       <PageHeader title={t("agents.create_title")} />
       <Card>
         <CardBody>
@@ -16,6 +17,6 @@ export function AgentCreatePage() {
           </p>
         </CardBody>
       </Card>
-    </>
+    </PageScroll>
   );
 }

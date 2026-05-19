@@ -4,6 +4,7 @@ import { Badge } from "@/design-system/components/Badge";
 import { Button } from "@/design-system/components/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/design-system/components/Card";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { useAuth } from "@/store/auth";
 
@@ -13,7 +14,7 @@ export function SettingsPage() {
   const { logout } = useAuth();
 
   return (
-    <>
+    <PageScroll>
       <PageHeader title={t("settings.title")} description={t("settings.description")} />
       <QueryBoundary query={query}>
         {(s) => (
@@ -86,6 +87,6 @@ export function SettingsPage() {
           </div>
         )}
       </QueryBoundary>
-    </>
+    </PageScroll>
   );
 }

@@ -1,13 +1,9 @@
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useActiveMatches } from "@/api/endpoints/matches";
 import { useAuth } from "@/store/auth";
-import { Avatar } from "@/design-system/components/Avatar";
-import { Badge } from "@/design-system/components/Badge";
-import { Card, CardBody } from "@/design-system/components/Card";
-import { PageHeader } from "@/design-system/components/PageHeader";
+import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
-import { TierBadge } from "@/design-system/components/TierBadge";
+import { AgentMatchCard } from "./components/AgentMatchCard";
 
 export function MatchesPage() {
   const { t } = useTranslation();
@@ -16,46 +12,29 @@ export function MatchesPage() {
 
   return (
     <>
-      <PageHeader title={t("matches.title")} description={t("matches.description")} />
-      <QueryBoundary query={query}>
-        {(data) => (
-          <div className="space-y-6">
-            {data.sections.map((section) => (
-              <section key={section.agentId}>
-                <h2 className="text-sm font-semibold text-text-muted mb-2">{section.title}</h2>
-                <div className="space-y-2">
+      <MobileHeader title={t("matches.title")} />
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-6 space-y-6">
+        <QueryBoundary query={query}>
+          {(data) =>
+            data.sections.map((section) => (
+              <section key={section.agentId} className="space-y-3">
+                <h2 className="text-sm font-semibold text-text-muted">
+                  {section.title}
+                </h2>
+                <div className="space-y-3">
                   {section.matches.map((m) => (
-                    <Card key={m.matchId}>
-                      <Link to={`/conversations/${m.matchId}`} className="block">
-                        <CardBody className="flex items-center gap-3">
-                          <Avatar
-                            src={m.partnerAgent.avatarUrl}
-                            name={m.partnerAgent.displayName}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">
-                                {m.partnerAgent.displayName}
-                              </span>
-                              <TierBadge tier={m.tier} />
-                              {m.unreadCount > 0 ? (
-                                <Badge tone="primary">{m.unreadCount}</Badge>
-                              ) : null}
-                            </div>
-                            <p className="text-sm text-text-muted line-clamp-1">
-                              {m.lastMessage?.preview ?? "No messages yet"}
-                            </p>
-                          </div>
-                        </CardBody>
-                      </Link>
-                    </Card>
+                    <AgentMatchCard
+                      key={m.matchId}
+                      match={m}
+                      compatibilityScore={m.compatibilityScore}
+                    />
                   ))}
                 </div>
               </section>
-            ))}
-          </div>
-        )}
-      </QueryBoundary>
+            ))
+          }
+        </QueryBoundary>
+      </div>
     </>
   );
 }

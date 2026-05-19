@@ -4,6 +4,7 @@ import { useAnalytics } from "@/api/endpoints/analytics";
 import { useAuth } from "@/store/auth";
 import { Card, CardBody, CardHeader, CardTitle } from "@/design-system/components/Card";
 import { PageHeader } from "@/design-system/components/PageHeader";
+import { PageScroll } from "@/design-system/components/PageScroll";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { TierBadge } from "@/design-system/components/TierBadge";
 
@@ -13,7 +14,7 @@ export function AnalyticsPage() {
   const query = useAnalytics(activeAgentId ?? undefined);
 
   return (
-    <>
+    <PageScroll>
       <PageHeader title={t("analytics.title")} description={t("analytics.description")} />
       <QueryBoundary query={query}>
         {(data) => (
@@ -61,6 +62,6 @@ export function AnalyticsPage() {
           </div>
         )}
       </QueryBoundary>
-    </>
+    </PageScroll>
   );
 }

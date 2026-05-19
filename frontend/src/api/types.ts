@@ -203,6 +203,8 @@ export type ActiveMatch = {
     isFromMe: boolean;
   } | null;
   matchedAt: string;
+  /** Mock-only — pending API spec extension. */
+  compatibilityScore?: number;
 };
 
 export type ActiveMatchesResponse = {
