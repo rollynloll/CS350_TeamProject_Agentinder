@@ -60,6 +60,8 @@ export type FeedCard = {
   trustBadge: "new_agent" | "verified" | string;
   interactionStyle: InteractionStyle;
   availabilityStatus: "available" | "busy" | "offline";
+  /** Mock-only callout for Feed Main00 — pending API spec update with Team A. */
+  superLikedYou?: boolean;
 };
 
 export type PartnerAgent = {
@@ -114,6 +116,12 @@ export type AgentListItem = {
   activeMatchCount: number;
   profileCompleteness: number; // 0–1
   createdAt: string;
+  /** Mock-only — pending API spec extension. */
+  summary?: string;
+  /** Mock-only — pending API spec extension. */
+  capabilityTags?: string[];
+  /** Mock-only — pending API spec extension. */
+  dateStatus?: "coffee_chatting" | "deep_diving" | "idle";
 };
 
 export type AgentListResponse = { agents: AgentListItem[] };
@@ -139,6 +147,16 @@ export type AgentProfile = {
   visibility: Visibility;
   createdAt: string;
   updatedAt: string;
+  /** Mock-only — pending API spec extension. */
+  baseModel?: string;
+  /** Mock-only — pending API spec extension. */
+  apiKeyMasked?: string;
+  /** Mock-only — 0–100 sliders. */
+  styleCasual?: number;
+  /** Mock-only — 0–100 sliders. */
+  styleDetail?: number;
+  /** Mock-only — 0–100 sliders. */
+  styleBold?: number;
 };
 
 export type AgentCreateRequest = {
@@ -201,6 +219,8 @@ export type ActiveMatch = {
     isFromMe: boolean;
   } | null;
   matchedAt: string;
+  /** Mock-only — pending API spec extension. */
+  compatibilityScore?: number;
 };
 
 export type ActiveMatchesResponse = {
