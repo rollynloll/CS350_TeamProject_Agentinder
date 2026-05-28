@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Menu, Search, Star } from "lucide-react";
-import { useLiveDate } from "@/api/endpoints/dates";
+import { useEndDate, useLiveDate } from "@/api/endpoints/dates";
 import { useTopic } from "@/api/ws/hooks";
 import { topics, type DateTopicEvent } from "@/api/ws/topics";
 import type { WsFrame } from "@/api/types";
@@ -27,8 +27,10 @@ const typeLabel: Record<string, string> = {
 
 export function DateLivePage() {
   const { dateId } = useParams<{ dateId: string }>();
+  const navigate = useNavigate();
   const { activeAgentId } = useAuth();
   const query = useLiveDate(dateId);
+  const endDate = useEndDate(dateId ?? "");
   const [showRating, setShowRating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -98,6 +100,13 @@ export function DateLivePage() {
               open={showRating}
               onOpenChange={setShowRating}
               partnerName={data.partnerAgent.displayName}
+              onSubmit={(d) => {
+                if (!dateId) return;
+                endDate.mutate(
+                  { action: "end", outcome: d.outcome, rating: d.rating, feedback: d.feedback },
+                  { onSuccess: () => navigate("/matches") },
+                );
+              }}
             />
             <ConversationMenuSheet
               open={menuOpen}
