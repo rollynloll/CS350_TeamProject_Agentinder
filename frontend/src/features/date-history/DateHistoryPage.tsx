@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Star } from "lucide-react";
 import { useMatchDates } from "@/api/endpoints/relationships";
+import { useEndDate } from "@/api/endpoints/dates";
+import { Button } from "@/design-system/components/Button";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
+import { RatingSheet } from "@/features/date-live/components/RatingSheet";
 import type { DateHistoryItem, DateType } from "@/api/types";
 
 const typeLabel: Record<DateType, string> = {
@@ -14,6 +18,8 @@ const typeLabel: Record<DateType, string> = {
 export function DateHistoryPage() {
   const { matchId } = useParams<{ matchId: string }>();
   const query = useMatchDates(matchId);
+  const [rateId, setRateId] = useState<string | null>(null);
+  const endDate = useEndDate(rateId ?? "");
 
   return (
     <QueryBoundary query={query}>
@@ -22,19 +28,45 @@ export function DateHistoryPage() {
           <MobileHeader showBack title={data.match.partnerAgent.displayName} />
           <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-6 space-y-3">
             {data.dates.map((d) => (
-              <DateHistoryCard key={d.dateId} item={d} />
+              <DateHistoryCard key={d.dateId} item={d} onRate={() => setRateId(d.dateId)} />
             ))}
           </div>
+
+          {/* SRS UC-0502: rate a completed date from history (within 72h). */}
+          <RatingSheet
+            open={rateId != null}
+            onOpenChange={(o) => {
+              if (!o) setRateId(null);
+            }}
+            partnerName={data.match.partnerAgent.displayName}
+            onSubmit={(r) => {
+              if (!rateId) return;
+              endDate.mutate(
+                {
+                  action: "end",
+                  outcome: r.outcome,
+                  rating: r.rating,
+                  compatibility: r.compatibility,
+                  feedback: r.feedback,
+                },
+                { onSuccess: () => setRateId(null) },
+              );
+            }}
+          />
         </>
       )}
     </QueryBoundary>
   );
 }
 
-function DateHistoryCard({ item }: { item: DateHistoryItem }) {
-  const rating = item.mutualRating
-    ? `${item.mutualRating.toFixed(1)}/5`
-    : "rating";
+function DateHistoryCard({
+  item,
+  onRate,
+}: {
+  item: DateHistoryItem;
+  onRate: () => void;
+}) {
+  const rating = item.mutualRating ? `${item.mutualRating.toFixed(1)}/5` : "rating";
   return (
     <article className="rounded-2xl bg-surface shadow-card p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
@@ -47,9 +79,14 @@ function DateHistoryCard({ item }: { item: DateHistoryItem }) {
         </span>
       </div>
       <div className="text-[11px] text-text-subtle font-medium">Result</div>
-      <p className="text-sm text-text-muted leading-relaxed line-clamp-3">
-        {item.summary}
-      </p>
+      <p className="text-sm text-text-muted leading-relaxed line-clamp-3">{item.summary}</p>
+      {item.status === "completed" ? (
+        <div className="flex justify-end pt-1">
+          <Button size="sm" variant="secondary" onClick={onRate}>
+            Rate
+          </Button>
+        </div>
+      ) : null}
     </article>
   );
 }

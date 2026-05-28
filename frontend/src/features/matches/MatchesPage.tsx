@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useActiveMatches } from "@/api/endpoints/matches";
+import { useActiveMatches, useApproveMatch, useRejectMatch } from "@/api/endpoints/matches";
 import { useAuth } from "@/store/auth";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
@@ -9,6 +9,9 @@ export function MatchesPage() {
   const { t } = useTranslation();
   const { activeAgentId } = useAuth();
   const query = useActiveMatches(activeAgentId ?? undefined);
+  const approve = useApproveMatch();
+  const reject = useRejectMatch();
+  const deciding = approve.isPending || reject.isPending;
 
   return (
     <>
@@ -27,6 +30,9 @@ export function MatchesPage() {
                       key={m.matchId}
                       match={m}
                       compatibilityScore={m.compatibilityScore}
+                      deciding={deciding}
+                      onApprove={() => approve.mutate(m.matchId)}
+                      onReject={() => reject.mutate(m.matchId)}
                     />
                   ))}
                 </div>

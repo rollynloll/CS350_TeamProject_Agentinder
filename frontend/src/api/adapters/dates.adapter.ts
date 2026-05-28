@@ -56,10 +56,11 @@ export function mapScheduleResponse(be: BeDate): ScheduleDateResponse {
 // rating is not submitted to the backend (the date still ends). Threading the
 // partner agent id through the UI is a follow-up.
 export function mapEndRequest(req: EndDateRequest): BeEndDateRequest {
+  const compat = req.compatibility ?? req.rating;
   return {
     outcome: req.outcome,
     rating_stars: req.rating,
-    rating_compatibility: req.rating != null ? req.rating / 5 : undefined,
+    rating_compatibility: compat != null ? compat / 5 : undefined,
   };
 }
 

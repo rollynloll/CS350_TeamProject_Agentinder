@@ -103,7 +103,13 @@ export function DateLivePage() {
               onSubmit={(d) => {
                 if (!dateId) return;
                 endDate.mutate(
-                  { action: "end", outcome: d.outcome, rating: d.rating, feedback: d.feedback },
+                  {
+                    action: "end",
+                    outcome: d.outcome,
+                    rating: d.rating,
+                    compatibility: d.compatibility,
+                    feedback: d.feedback,
+                  },
                   { onSuccess: () => navigate("/matches") },
                 );
               }}

@@ -27,6 +27,9 @@ function mapActiveMatch(m: BeMatch, viewer: AgentId): ActiveMatch {
     unreadCount: 0,
     lastMessage: null,
     matchedAt: m.created_at,
+    approvalStatus: m.status
+      ? (m.status as NonNullable<ActiveMatch["approvalStatus"]>)
+      : undefined,
   };
 }
 
