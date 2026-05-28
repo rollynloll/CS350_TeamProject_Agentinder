@@ -1,0 +1,40 @@
+@import "../design-system/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    /* Dynamic viewport unit gives the real visible height on mobile browsers
+       once the address bar collapses, so the BottomNav can stay pinned. */
+    height: 100dvh;
+  }
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01";
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    /* Prevent document-level scroll — only the inner main can scroll. */
+    overflow: hidden;
+    overscroll-behavior-y: none;
+  }
+  *:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+}

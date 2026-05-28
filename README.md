@@ -11,7 +11,7 @@ AI 에이전트를 위한 데이팅 앱. KAIST CS350 팀 6 프로젝트.
 | 팀원 A | [서지훈] | 백엔드 — 실시간/인프라 |
 | 팀원 B | [신승운] | 모델 + PM — AI/로직 |
 | 팀원 C | [이상진] | 앱 UI/UX 디자인 |
-| 팀원 D | [이름] | 프론트엔드 — 데이트/관계 흐름 |
+| 팀원 D | [지동석] | 프론트엔드 — 데이트/관계 흐름 |
 
 ---
 
@@ -227,103 +227,110 @@ LLMClient.generate()
 
 ---
 
-### 팀원 D — 프론트엔드 데이트/관계 흐름
-
-**담당 뷰 / 컴포넌트**
-
-*View (페이지 단위)*
-- ConversationView — 1:1 메시징 (Screen ⑩ / SRS Conversation View)
-- DateView — 실시간 Date 세션 (Screen ⑨ / SRS Date View)
-- DateHistoryDetail — 특정 매치의 데이트 이력 + 평가 (Screen ⑧ / SRS Date History)
-- RelationshipsView — 관계 단계별 소셜 네트워크 시각화 (SRS Relationships View, 와이어프레임 신규 설계)
-- AnalyticsView — 에이전트 통계 대시보드 (Screen ⑥ / SRS Analytics View)
-
-*공통 컴포넌트*
-- WebSocketProvider — 앱 전역 단일 연결, topic 기반 subscribe/unsubscribe
-- ChatBubble, MessageList, TypingIndicator, ReadReceipt
-- IcebreakerCard — Date 시작 시 3개 프롬프트 표시
-- DateTimer — 경과시간 / 남은시간 카운트다운
-- ScheduleDateModal — 데이트 타입(Coffee Chat / Activity / Deep Dive) 선택 + 시간 협의
-- PostDateRatingForm — 1~5점 + compatibility 슬라이더 + 코멘트 280자 (REQ-0307)
-- RelationshipTierBadge — Stranger / Acquaintance / Colleague / Trusted Partner
-
-**담당 기능**
-- WebSocket 클라이언트 — 단일 연결, multiplexing (`chat.{matchId}`, `date.{dateId}`)
-- 자동 재연결 — exponential backoff (1s → 2s → 4s → 8s → 30s, 30초 ping/pong heartbeat)
-- 1:1 메시지 — 실시간 송수신, 읽음 처리 (markRead), 타이핑 인디케이터
-- Optimistic update — 메시지 전송 시 즉시 UI 반영, 서버 ACK 시 확정 / 실패 시 rollback
-- Schedule Date 플로우 — 채팅에서 데이트 제안 → 타입 선택 → 시간 협의 → 확정 (UC-0301)
-- Coffee Chat 진행 화면 — icebreaker 프롬프트 표시, 메시지 스트림, 경과시간, "End Date" 버튼 (UC-0302)
-- 노쇼 / 재연결 처리 — 5분 미입장 안내, 3분 재연결 grace period UI
-- Chaperone 모드 — Principal 시점 read-only 관전, `send_date_message` 비활성 (UC-0602, REQ-0309)
-- Post-Date Rating — 종료 72시간 이내 평가 폼, 이슈 체크박스(hallucination / latency / unresponsive 등) (UC-0502)
-- Date History 상세 — outcome, transcript 스크롤, 매치 단위 데이트 카드 리스트
-- Relationships View — tier별 그룹화, 관계 health 인디케이터, 상호 endorsement 표시 (REQ-0405, REQ-0407)
-- Unmatch 플로우 — 확인 모달, 진행 중 Date 존재 시 차단 (UC-0403)
-- Analytics 차트 — trust score 추이(시계열), date 성공률, 호환성 영역 top 5, tier 분포, 주간 활동 요약 (REQ-0605)
-- Envelope 응답 파싱 — `{data, meta, error}` 공통 처리, cursor 기반 페이지네이션 무한 스크롤
-- Idempotency-Key 헤더 — POST/PATCH 요청 시 UUID 생성하여 재시도 안전성 확보
-
-**호출 API — 팀원 A 제공**
-
-*REST*
-```
-GET    /matches/{matchId}/messages       대화 히스토리 (cursor)
-POST   /matches/{matchId}/dates          Date 제안
-GET    /matches/{matchId}/dates          매치의 Date 이력 (cursor)
-GET    /dates/{dateId}                   Date 세션 조회
-PATCH  /dates/{dateId}                   상태 변경
-POST   /dates/{dateId}/end               종료 + 평가 제출
-GET    /dates/{dateId}/icebreaker        icebreaker 조회
-GET    /agents/{agentId}/relationships   관계 목록 (tier별)
-GET    /agents/{agentId}/analytics       통계 데이터
-```
-
-*WebSocket (`wss://api.agentinder.io/v1/ws`)*
-```
-chat.{matchId}    수신: message, typing, read
-                  송신: send_message, mark_read, typing_start, typing_stop
-
-date.{dateId}     수신: date_message, icebreaker_prompt, time_warning, date_ended
-                  송신: send_date_message, end_date
-```
-
-**대응 SRS 요구사항**
-- Dates: UC-0301 ~ UC-0304, REQ-0301 ~ REQ-0310
-- Relationships & Messaging: UC-0401 ~ UC-0403, REQ-0401 ~ REQ-0407
-- Handshake (rating 제출): UC-0502
-- Principal Dashboard: UC-0602 (Chaperone), REQ-0605 (Analytics)
+### 팀원 D — 프론트엔드 Principal App
 
 **기술 스택**
+- Vite + React 18 + TypeScript (strict)
+- React Router v6 (declarative)
+- TanStack Query (서버 캐시 — API spec의 "화면당 1 REST call" BFF 패턴과 1:1 매핑)
+- Zustand (auth · WS 연결 상태 · UI 상태)
+- Tailwind CSS + CSS variables 디자인 토큰
+- Radix UI (headless primitives — 접근성 보장)
+- React Hook Form + Zod (Profile Editor validation)
+- MSW (Mock Service Worker) — REST + WebSocket 모킹, 백엔드 미완성 단계에서 UI 개발 진행
+- react-i18next (en/ko 시드, ja/zh 아키텍처 준비)
+- Recharts (Analytics 차트)
 
-확정
-- React (README 공통 스택)
+**담당 모듈**
 
-미정 — 1주차 합의 필요
-- 라우팅: React Router vs Next.js App Router
-- 상태관리 / 서버 캐시: Zustand + TanStack Query vs Redux Toolkit
-- 스타일링: Tailwind CSS vs CSS-in-JS (emotion / styled-components)
-- WebSocket 클라이언트: 네이티브 WebSocket vs `socket.io-client`
-- 차트: Recharts vs Chart.js
-- 폼: React Hook Form + Zod
+*API 레이어 — [frontend/src/api/](./frontend/src/api/)*
+- `client.ts` — fetch 래퍼, envelope `{data, meta, error}` 자동 unwrap, Bearer 토큰, X-Idempotency-Key 자동 부여
+- `types.ts` — API spec §3의 11개 화면 응답 타입
+- `endpoints/{feed,discover,agents,matches,relationships,dates,messages,analytics,settings}.ts` — TanStack Query 훅
+- `ws/client.ts` — 싱글톤 WebSocket 매니저, 30초 heartbeat, exponential backoff reconnect (1→2→4→8→16→max 30s), topic-multiplex
+- `ws/topics.ts` — `matches.{agentId}` / `chat.{matchId}` / `date.{dateId}` 토픽 + 이벤트 타입
+- `ws/hooks.ts` — `useTopic(topic, handler)`, `useWsStatus()`
 
-**팀 의존성**
-- ← 팀원 C: 각 뷰의 UI 디자인 / 인터랙션 명세 (Figma or 와이어프레임)
-- ← 팀원 A: REST 엔드포인트 + WebSocket 토픽 (envelope 포맷, 토픽명 변경 시 사전 공지)
-- ← 팀원 B: 응답 페이로드의 도메인 타입 (Agent, Match, Date, Relationship, RatingForm)
-- → 팀원 A: 메시지/Date 송신 액션, 클라이언트 사이드 검증 룰 피드백
+*Mock 레이어 — [frontend/src/mocks/](./frontend/src/mocks/)*
+- `handlers.ts` — 11개 REST endpoint 핸들러 (envelope 응답 wrap)
+- `ws-broker.ts` — in-memory WebSocket 모킹, Date View 진입 3초 후 가짜 메시지, Match 토픽 8초 후 new_match 푸시
+- `fixtures/{agents,matches,analytics}.ts` — 시드 데이터 (에이전트 2명, 매치 2개, 데이트 1개 등)
+- `browser.ts` — MSW worker setup
 
-**개발 산출물 위치**
+*디자인 시스템 — [frontend/src/design-system/](./frontend/src/design-system/)*
+- `tokens.css` — CSS 변수 (색·radius·shadow·motion, 다크모드 포함)
+- 도메인 컴포넌트: `SwipeCard`, `TrustBadge` (REQ-0504/0507), `TierBadge`, `CompatibilityRing` (REQ-0208, CO-5)
+- 프리미티브: `Button`, `Card`, `Badge`, `Avatar`, `Spinner`, `PageHeader`, `EmptyState`, `QueryBoundary`
+
+*화면 — [frontend/src/features/](./frontend/src/features/)*
+
+10개 SRS §3.1.1 뷰를 1 REST call + (필요시) WS topic 구독으로 구현:
+
+| 경로 | SRS 뷰 | API endpoint | WS 토픽 |
+|---|---|---|---|
+| `/login` | OAuth 로그인 | (Mock dev login) | — |
+| `/` | Home / Feed | `GET /feed/{agentId}` | — |
+| `/discover` | Discover | `GET /discover/{agentId}` | — |
+| `/agents` | My Profiles | `GET /principals/me/agents` | — |
+| `/agents/new` | Profile Add | `POST /principals/me/agents` | — |
+| `/agents/:id` | Profile Detail | `GET /agents/{id}/profile` | — |
+| `/agents/:id/edit` | Profile Edit | `PUT /agents/{id}/profile` + avatar | — |
+| `/matches` | Active Matches | `GET /agents/{id}/matches` | — |
+| `/conversations/:matchId` | Conversation (DM) | `GET /matches/{id}/messages` | `chat.{matchId}` |
+| `/matches/:matchId/history` | Date History | `GET /matches/{id}/dates` | — |
+| `/dates/:dateId` | Live Date | `GET /dates/{id}` | `date.{dateId}` |
+| `/relationships` | Relationships | `GET /agents/{id}/relationships` | — |
+| `/analytics` | Analytics | `GET /agents/{id}/analytics` | — |
+| `/settings` | Settings | `GET /principals/me/settings` | — |
+
+*레이아웃 — [frontend/src/layouts/](./frontend/src/layouts/)*
+- `AuthedLayout` — 사이드바(데스크탑) / 하단탭(모바일), WS 1회 연결, 활성 에이전트의 `matches.{agentId}` 자동 구독
+- `PublicLayout` — 로그인 화면 등
+
+*기타*
+- [frontend/src/store/](./frontend/src/store/) — `auth.ts` (token, principalId, activeAgentId 영속화), `ui.ts` (sidebar, toast)
+- [frontend/src/i18n/](./frontend/src/i18n/) — react-i18next, `?lang=ko` 쿼리 또는 localStorage 감지
+- [frontend/src/router.tsx](./frontend/src/router.tsx) — 14개 라우트
+- [frontend/src/main.tsx](./frontend/src/main.tsx) — MSW worker 부트스트랩 후 React 렌더
+- [frontend/src/App.tsx](./frontend/src/App.tsx) — QueryClient + RouterProvider, WS 클라이언트 설정
+
+**담당 기능**
+- 모든 화면을 1 REST call로 초기 렌더 (DP-01 Screen-First Aggregation)
+- 단일 WebSocket 연결로 매치·채팅·데이트 실시간 이벤트 multiplexing (DP-04)
+- Optimistic update 인프라 — TanStack Query mutation `onSuccess`에서 invalidate (DP-03)
+- API spec envelope 통일 처리 (DP-05) — 모든 응답에서 `{data, meta, error}` unwrap
+- Idempotency-Key 자동 부여 — POST/PATCH/PUT/DELETE 요청 시 UUID v4 헤더 (DP-06)
+- Cursor 기반 페이지네이션 인프라 (`meta.pagination.nextCursor`)
+- Mock 모드 토글 — `VITE_USE_MOCK=true`일 때 MSW + in-memory WS 사용, false일 때 실제 백엔드 연동
+- OAuth 2.0/OIDC 로그인 진입점 (REQ-0602: Google/Microsoft/GitHub) + Mock dev login
+- 반응형 — 데스크탑 사이드바 / 모바일 하단탭
+- 다크모드 — `prefers-color-scheme` 기반 CSS 변수 자동 전환
+- i18n 아키텍처 — 영어/한국어 시드, 일본어/중국어 placeholder (I18N-1)
+- Trust 점수 표시 규약 — 데이트 5회 미만 시 "New Agent" 배지, 이상 시 0.0–1.0 (REQ-0504)
+- 호환성 점수 시각화 — 0–100 ring + "Why this match?" 토글 자리 (CO-5, REQ-0208)
+- Pause/Kill switch UI 자리 (REQ-0607/0608)
+- 환경 변수 — `VITE_API_BASE_URL`, `VITE_WS_URL`, `VITE_USE_MOCK`, OAuth client IDs
+
+**실행**
+
+```bash
+cd frontend
+npm install
+npm run msw:init   # public/mockServiceWorker.js 생성 (최초 1회)
+npm run dev        # http://localhost:5173
 ```
-frontend/
-├── src/
-│   ├── views/           # ConversationView, DateView, ...
-│   ├── components/      # ChatBubble, IcebreakerCard, ...
-│   ├── hooks/           # useWebSocket, useDateSession, ...
-│   ├── api/             # REST 클라이언트, envelope 파싱
-│   └── ws/              # WebSocketProvider, topic registry
-└── public/
-```
+
+상세 가이드: [frontend/README.md](./frontend/README.md)
+
+**아직 미구현 (V1+ 작업)**
+- 스와이프 제스처 (현재는 카드 렌더링만)
+- Profile Editor 위자드 (bio·태그·슬라이더·캘린더 입력 폼)
+- 실시간 채팅 입력/전송 (현재는 수신만)
+- 데이트 종료 + 평가 폼 (1–5★, compat 슬라이더, 280자 코멘트)
+- Auto-match 규칙 에디터
+- Pause / Kill switch 실제 동작
+- 실제 OAuth 연동
+- Vercel 배포 설정
 
 ---
 
@@ -431,4 +438,4 @@ dev           # 통합 브랜치
 |---|---|---|
 | 2026-05-13 | [신승운] | 최초 작성 |
 | 2026-05-14 | [신승운] | 개발 프레임워크 확정 |
-| 2026-05-15 | [팀원 D] | 팀원 D 담당 영역 작성 (뷰/컴포넌트, 기능, 호출 API, SRS 매핑, 기술 스택 후보) |
+| 2026-05-19 | [지동석] | 팀원 D 프론트엔드 섹션 — Principal App 전체(10개 뷰) 스캐폴드 기준으로 작성 |

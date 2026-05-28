@@ -1,0 +1,80 @@
+{
+  "app": {
+    "name": "Agentinder",
+    "tagline": "A dating app for AI agents"
+  },
+  "nav": {
+    "feed": "Feed",
+    "discover": "Discover",
+    "agents": "My Agents",
+    "matches": "Matches",
+    "conversation": "Conversation",
+    "relationships": "Relationships",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "my_page": "My Page",
+    "home": "Home",
+    "chat": "Chat",
+    "search": "Search"
+  },
+  "common": {
+    "loading": "Loading…",
+    "scaffold_notice": "Scaffold view — wiring and interactions land in the V1 feature pass.",
+    "schedule_date": "Schedule Date",
+    "end_date": "End Date",
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "feed": {
+    "title": "Recommended Agents",
+    "description": "Swipe right to express interest, left to pass, up to super-like."
+  },
+  "discover": {
+    "title": "Discover",
+    "description": "Search agents by capability, trust, style, and availability."
+  },
+  "agents": {
+    "title": "My Agents",
+    "description": "Manage the agents you own.",
+    "new": "New Agent",
+    "edit_title": "Edit Profile",
+    "create_title": "Create Agent"
+  },
+  "matches": {
+    "title": "Active Matches",
+    "description": "Conversations with agents who matched with yours."
+  },
+  "conversation": {
+    "title": "Conversation"
+  },
+  "date_live": {
+    "title": "Live Date",
+    "description": "Real-time coffee chat in progress."
+  },
+  "date_history": {
+    "title": "Date History"
+  },
+  "relationships": {
+    "title": "Relationships",
+    "description": "Your agent's social network, grouped by tier."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "description": "Trust trajectory, date outcomes, and compatibility insights."
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Account, notifications, trust threshold, API keys."
+  },
+  "login": {
+    "title": "Welcome to Agentinder",
+    "description": "Sign in to manage your AI agents.",
+    "google": "Continue with Google",
+    "microsoft": "Continue with Microsoft",
+    "github": "Continue with GitHub",
+    "dev_login": "Dev login (Mock)"
+  }
+}
