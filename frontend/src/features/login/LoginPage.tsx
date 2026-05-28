@@ -16,10 +16,13 @@ export function LoginPage() {
   const { setSession } = useAuth();
 
   const devLogin = () => {
+    // For real-backend testing, set VITE_DEV_JWT (signed with the backend's
+    // SUPABASE_JWT_SECRET) + the seeded principal/agent UUIDs. Falls back to the
+    // mock seed identity when unset so pure-mock mode keeps working.
     setSession({
-      token: "mock_access_token",
-      principalId: "pr_seed_dev",
-      activeAgentId: "ag_seed_001",
+      token: import.meta.env.VITE_DEV_JWT ?? "mock_access_token",
+      principalId: import.meta.env.VITE_DEV_PRINCIPAL_ID ?? "pr_seed_dev",
+      activeAgentId: import.meta.env.VITE_DEV_AGENT_ID ?? "ag_seed_001",
     });
     navigate("/", { replace: true });
   };
