@@ -1,6 +1,7 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, type RequestHandler } from "msw";
 import type { Envelope } from "@/api/types";
 import { uuid } from "@/lib/uuid";
+import { MIGRATE } from "@/api/migration-flags";
 import { agentProfiles, feedCards, myAgents } from "./fixtures/agents";
 import { activeMatches, conversation, liveDate, matchDates, relationships } from "./fixtures/matches";
 import { analytics, settings } from "./fixtures/analytics";
@@ -30,22 +31,33 @@ function notFound(message = "Resource not found") {
 
 const url = (path: string): string => `${BASE}${path}`;
 
-export const handlers = [
-  // §3.1 Feed
-  http.get(url("/feed/:agentId"), () => ok({ cards: feedCards })),
-  http.post(url("/feed/:agentId/swipe"), async ({ request }) => {
-    const body = (await request.json()) as { targetAgentId: string; action: string };
-    const matched = body.action !== "pass" && Math.random() > 0.5;
-    return ok({
-      matched,
-      matchId: matched ? `mt_${uuid().slice(0, 8)}` : null,
-      icebreakers: matched
-        ? ["You both list research as a capability. How do you verify sources?"]
-        : null,
-    });
-  }),
+// Include a handler only while its endpoint is NOT migrated to the real backend.
+// A migrated endpoint has no mock handler, so its request flows to the real API
+// (worker.start uses onUnhandledRequest: "bypass").
+const when = (mocked: boolean, ...hs: RequestHandler[]): RequestHandler[] => (mocked ? hs : []);
 
-  // §3.2 Discover
+export const handlers: RequestHandler[] = [
+  // §3.1 Feed
+  ...when(
+    !MIGRATE.feed,
+    http.get(url("/feed/:agentId"), () => ok({ cards: feedCards })),
+  ),
+  ...when(
+    !MIGRATE.swipe,
+    http.post(url("/feed/:agentId/swipe"), async ({ request }) => {
+      const body = (await request.json()) as { targetAgentId: string; action: string };
+      const matched = body.action !== "pass" && Math.random() > 0.5;
+      return ok({
+        matched,
+        matchId: matched ? `mt_${uuid().slice(0, 8)}` : null,
+        icebreakers: matched
+          ? ["You both list research as a capability. How do you verify sources?"]
+          : null,
+      });
+    }),
+  ),
+
+  // §3.2 Discover (mock-only — no backend route)
   http.get(url("/discover/:agentId"), ({ request }) => {
     const u = new URL(request.url);
     return ok({
@@ -59,34 +71,47 @@ export const handlers = [
   }),
 
   // §3.3 My Profiles
-  http.get(url("/principals/me/agents"), () =>
-    ok({ agents: myAgents }, { pagination: { nextCursor: null, hasMore: false, totalCount: myAgents.length } }),
+  ...when(
+    !MIGRATE.agentsList,
+    http.get(url("/principals/me/agents"), () =>
+      ok({ agents: myAgents }, { pagination: { nextCursor: null, hasMore: false, totalCount: myAgents.length } }),
+    ),
   ),
 
   // §3.4 Profile Detail
-  http.get(url("/agents/:agentId/profile"), ({ params }) => {
-    const profile = agentProfiles[params.agentId as string];
-    return profile ? ok(profile) : notFound("Agent profile not found");
-  }),
+  ...when(
+    !MIGRATE.agentProfile,
+    http.get(url("/agents/:agentId/profile"), ({ params }) => {
+      const profile = agentProfiles[params.agentId as string];
+      return profile ? ok(profile) : notFound("Agent profile not found");
+    }),
+  ),
 
   // §3.5 Profile create / update / avatar / delete
-  http.post(url("/principals/me/agents"), async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    return ok({
-      ...agentProfiles.ag_seed_001,
-      agentId: `ag_${uuid().slice(0, 8)}`,
-      displayName: (body.displayName as string) ?? "NewAgent",
-      bio: (body.bio as string) ?? "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  }),
-  http.put(url("/agents/:agentId/profile"), async ({ params, request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    const current = agentProfiles[params.agentId as string];
-    if (!current) return notFound("Agent not found");
-    return ok({ ...current, ...body, updatedAt: new Date().toISOString() });
-  }),
+  ...when(
+    !MIGRATE.agentCreate,
+    http.post(url("/principals/me/agents"), async ({ request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      return ok({
+        ...agentProfiles.ag_seed_001,
+        agentId: `ag_${uuid().slice(0, 8)}`,
+        displayName: (body.displayName as string) ?? "NewAgent",
+        bio: (body.bio as string) ?? "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }),
+  ),
+  ...when(
+    !MIGRATE.agentUpdate,
+    http.put(url("/agents/:agentId/profile"), async ({ params, request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      const current = agentProfiles[params.agentId as string];
+      if (!current) return notFound("Agent not found");
+      return ok({ ...current, ...body, updatedAt: new Date().toISOString() });
+    }),
+  ),
+  // avatar + delete are mock-only (no backend route)
   http.post(url("/agents/:agentId/avatar"), ({ params }) =>
     ok({
       avatarUrl: `https://api.dicebear.com/9.x/bottts/svg?seed=${params.agentId}_v2`,
@@ -94,42 +119,60 @@ export const handlers = [
   ),
   http.delete(url("/agents/:agentId"), () => new HttpResponse(null, { status: 204 })),
 
-  // §3.6 Analytics
+  // §3.6 Analytics (mock-only)
   http.get(url("/agents/:agentId/analytics"), () => ok(analytics)),
 
   // §3.7 Active Matches
-  http.get(url("/agents/:agentId/matches"), () => ok(activeMatches)),
+  ...when(
+    !MIGRATE.matches,
+    http.get(url("/agents/:agentId/matches"), () => ok(activeMatches)),
+  ),
 
-  // §3.8 Relationships
+  // §3.8 Relationships (tiers mock-only; match date history has a backend route)
   http.get(url("/agents/:agentId/relationships"), () => ok(relationships)),
-  http.get(url("/matches/:matchId/dates"), () => ok(matchDates)),
+  ...when(
+    !MIGRATE.dateHistory,
+    http.get(url("/matches/:matchId/dates"), () => ok(matchDates)),
+  ),
 
   // §3.9 Live Date
-  http.get(url("/dates/:dateId"), ({ params }) => {
-    if (params.dateId !== liveDate.dateId) return notFound("Date not found");
-    return ok(liveDate);
-  }),
-  http.post(url("/matches/:matchId/dates"), async ({ request }) => {
-    const body = (await request.json()) as { type: string; proposedTime: string };
-    return new HttpResponse(
-      JSON.stringify({
-        data: {
-          dateId: `dt_${uuid().slice(0, 8)}`,
-          status: "proposed",
-          type: body.type,
-          proposedTime: body.proposedTime,
-        },
-        error: null,
-      }),
-      { status: 201, headers: { "Content-Type": "application/json" } },
-    );
-  }),
-  http.patch(url("/dates/:dateId"), () => ok({ ...liveDate, status: "completed" as const })),
+  ...when(
+    !MIGRATE.dateGet,
+    http.get(url("/dates/:dateId"), ({ params }) => {
+      if (params.dateId !== liveDate.dateId) return notFound("Date not found");
+      return ok(liveDate);
+    }),
+  ),
+  ...when(
+    !MIGRATE.dateSchedule,
+    http.post(url("/matches/:matchId/dates"), async ({ request }) => {
+      const body = (await request.json()) as { type: string; proposedTime: string };
+      return new HttpResponse(
+        JSON.stringify({
+          data: {
+            dateId: `dt_${uuid().slice(0, 8)}`,
+            status: "proposed",
+            type: body.type,
+            proposedTime: body.proposedTime,
+          },
+          error: null,
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    }),
+  ),
+  ...when(
+    !MIGRATE.dateEnd,
+    http.patch(url("/dates/:dateId"), () => ok({ ...liveDate, status: "completed" as const })),
+  ),
 
   // §3.10 Conversation
-  http.get(url("/matches/:matchId/messages"), () => ok(conversation)),
+  ...when(
+    !MIGRATE.messages,
+    http.get(url("/matches/:matchId/messages"), () => ok(conversation)),
+  ),
 
-  // §3.11 Settings
+  // §3.11 Settings (mock-only)
   http.get(url("/principals/me/settings"), () => ok(settings)),
   http.patch(url("/principals/me/settings"), async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
