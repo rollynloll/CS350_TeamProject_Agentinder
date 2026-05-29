@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json as _json
 from typing import Any
 from uuid import UUID
 
@@ -195,9 +196,14 @@ async def get_all_visible_agents(exclude_agent_id: UUID) -> list[asyncpg.Record]
     return await get_pool().fetch(
         "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
-        " ap.capability_embedding IS NOT NULL AS has_embedding"
+        " ap.style_vector,"
+        " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
         " FROM agents a JOIN agent_profiles ap USING (agent_id)"
-        " WHERE a.agent_id != $1 AND ap.is_suspended = false AND ap.visibility != 'hidden'",
+        " LEFT JOIN agent_capability_tags act USING (agent_id)"
+        " LEFT JOIN capability_vocabulary cv USING (tag_id)"
+        " WHERE a.agent_id != $1 AND ap.is_suspended = false AND ap.visibility != 'hidden'"
+        " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url, ap.style_vector",
         exclude_agent_id,
     )
 
@@ -219,3 +225,153 @@ async def get_principal_row(principal_id: UUID) -> asyncpg.Record | None:
         " WHERE p.principal_id = $1",
         principal_id,
     )
+
+
+async def get_principal_agents_full(principal_id: UUID) -> list[asyncpg.Record]:
+    """principal의 모든 에이전트를 Agent 객체 재구성에 필요한 전체 필드와 함께 반환."""
+    return await get_pool().fetch(
+        "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model,"
+        " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
+        " aper.thinking_style, aper.values, aper.conflict_style,"
+        " aper.collaboration_goal, aper.domain_interest, aper.system_prompt_cache,"
+        " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
+        " FROM agents a"
+        " JOIN agent_profiles ap USING (agent_id)"
+        " LEFT JOIN agent_personalities aper USING (agent_id)"
+        " LEFT JOIN agent_capability_tags act USING (agent_id)"
+        " LEFT JOIN capability_vocabulary cv USING (tag_id)"
+        " WHERE a.principal_id = $1"
+        " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model,"
+        " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
+        " aper.thinking_style, aper.values, aper.conflict_style,"
+        " aper.collaboration_goal, aper.domain_interest, aper.system_prompt_cache",
+        principal_id,
+    )
+
+
+async def insert_agent_full(
+    agent_id: UUID,
+    principal_id: UUID,
+    display_name: str,
+    avatar_url: str,
+    visibility: str,
+    llm_model: str,
+    style_vector: dict,
+    available_timezones: list[str],
+    bio: str,
+    style_formal: int,
+    style_verbose: int,
+    style_bold: int,
+    thinking_style: str | None,
+    values_text: str | None,
+    conflict_style: str | None,
+    collaboration_goal: str | None,
+    domain_interest: str | None,
+    system_prompt_cache: str,
+    api_key_hash: str,
+) -> None:
+    """에이전트 생성 시 agents, agent_profiles, agent_personalities, agent_credentials에 트랜잭션으로 삽입."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "INSERT INTO agents (agent_id, principal_id) VALUES ($1, $2)",
+                agent_id, principal_id,
+            )
+            await conn.execute(
+                "INSERT INTO agent_profiles"
+                " (agent_id, display_name, avatar_url, visibility, llm_model,"
+                "  style_vector, available_timezones)"
+                " VALUES ($1, $2, $3, $4::visibility_enum, $5, $6::jsonb, $7)",
+                agent_id, display_name, avatar_url or None, visibility.lower(),
+                llm_model, _json.dumps(style_vector), available_timezones,
+            )
+            await conn.execute(
+                "INSERT INTO agent_personalities"
+                " (agent_id, bio, style_formal, style_verbose, style_bold,"
+                "  thinking_style, values, conflict_style,"
+                "  collaboration_goal, domain_interest, system_prompt_cache)"
+                " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+                agent_id, bio, style_formal, style_verbose, style_bold,
+                thinking_style, values_text, conflict_style,
+                collaboration_goal, domain_interest, system_prompt_cache,
+            )
+            await conn.execute(
+                "INSERT INTO agent_credentials (agent_id, api_key_hash) VALUES ($1, $2)",
+                agent_id, api_key_hash,
+            )
+
+
+async def upsert_agent_profile_row(
+    agent_id: UUID,
+    display_name: str,
+    avatar_url: str,
+    visibility: str,
+    llm_model: str,
+    style_vector: dict,
+    available_timezones: list[str],
+    bio: str,
+    style_formal: int,
+    style_verbose: int,
+    style_bold: int,
+    thinking_style: str | None,
+    values_text: str | None,
+    conflict_style: str | None,
+    collaboration_goal: str | None,
+    domain_interest: str | None,
+    system_prompt_cache: str,
+) -> None:
+    """에이전트 수정 시 agent_profiles + agent_personalities를 트랜잭션으로 갱신."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "UPDATE agent_profiles"
+                " SET display_name=$2, avatar_url=$3, visibility=$4::visibility_enum,"
+                "     llm_model=$5, style_vector=$6::jsonb, available_timezones=$7, updated_at=now()"
+                " WHERE agent_id=$1",
+                agent_id, display_name, avatar_url or None, visibility.lower(),
+                llm_model, _json.dumps(style_vector), available_timezones,
+            )
+            await conn.execute(
+                "UPDATE agent_personalities"
+                " SET bio=$2, style_formal=$3, style_verbose=$4, style_bold=$5,"
+                "     thinking_style=$6, values=$7, conflict_style=$8,"
+                "     collaboration_goal=$9, domain_interest=$10, system_prompt_cache=$11"
+                " WHERE agent_id=$1",
+                agent_id, bio, style_formal, style_verbose, style_bold,
+                thinking_style, values_text, conflict_style,
+                collaboration_goal, domain_interest, system_prompt_cache,
+            )
+
+
+async def sync_capability_tags(agent_id: UUID, tag_names: list[str]) -> None:
+    """에이전트의 capability_tags를 통제 어휘 기반으로 교체. 미등록 태그는 어휘에 자동 추가."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            if tag_names:
+                await conn.executemany(
+                    "INSERT INTO capability_vocabulary (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
+                    [(name,) for name in tag_names],
+                )
+                tag_rows = await conn.fetch(
+                    "SELECT tag_id FROM capability_vocabulary WHERE name = ANY($1)",
+                    tag_names,
+                )
+                tag_ids = [r["tag_id"] for r in tag_rows]
+            else:
+                tag_ids = []
+
+            await conn.execute(
+                "DELETE FROM agent_capability_tags WHERE agent_id = $1", agent_id
+            )
+            if tag_ids:
+                await conn.executemany(
+                    "INSERT INTO agent_capability_tags (agent_id, tag_id) VALUES ($1, $2)",
+                    [(agent_id, tid) for tid in tag_ids],
+                )

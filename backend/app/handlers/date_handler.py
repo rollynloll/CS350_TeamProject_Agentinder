@@ -6,10 +6,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from .. import db
+from .. import db, deps
 from ..auth.authorization_policy import check_date_participant, check_match_participant
 from ..auth.error_handler_middleware import envelope
-from ..deps import agent_service, get_auth, get_event_bus, get_principal, score_manager
+from ..deps import get_auth, get_event_bus, get_principal
 from ..pubsub.domain_events import DateEnded, DateProposed, DateStarted
 
 router = APIRouter(tags=["dates"])
@@ -71,9 +71,9 @@ async def handle_join_date(date_id: UUID, agent_id: UUID, principal, bus) -> dic
         raise KeyError(f"데이트를 찾을 수 없습니다: {date_id}")
 
     agent = next((a for a in principal.agents if a.agent_id == agent_id), None)
-    if agent is None and agent_service is not None:
+    if agent is None and deps.agent_service is not None:
         try:
-            agent = agent_service.get(agent_id)
+            agent = deps.agent_service.get(agent_id)
         except KeyError:
             pass
     if agent is None:
@@ -118,9 +118,9 @@ async def end_date(
 
     for aid in (match_row["agent_a_id"], match_row["agent_b_id"]):
         agent = next((a for a in principal.agents if a.agent_id == aid), None)
-        if agent is None and agent_service is not None:
+        if agent is None and deps.agent_service is not None:
             try:
-                agent = agent_service.get(aid)
+                agent = deps.agent_service.get(aid)
             except KeyError:
                 pass
         if agent:
@@ -141,7 +141,7 @@ async def end_date(
         )
         principal.submitRating(date_id, rating)
 
-        sm = score_manager
+        sm = deps.score_manager
         assert sm is not None
         sm.recordSuccessfulDate(
             match_row["agent_a_id"],

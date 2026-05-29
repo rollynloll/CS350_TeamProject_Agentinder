@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import json as _json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from .. import db
+from .. import db, deps
 from ..auth.error_handler_middleware import envelope
-from ..deps import agent_service, get_event_bus, get_principal, score_manager
+from ..deps import get_event_bus, get_principal
 from ..pubsub.domain_events import MatchCreated
 
 router = APIRouter(prefix="/v1/agents", tags=["feed"])
@@ -29,9 +30,9 @@ async def get_feed(
         raise PermissionError("이 에이전트의 소유자가 아닙니다.")
 
     viewer_agent = next((a for a in principal.agents if a.agent_id == agent_id), None)
-    if viewer_agent is None and agent_service is not None:
+    if viewer_agent is None and deps.agent_service is not None:
         try:
-            viewer_agent = agent_service.get(agent_id)
+            viewer_agent = deps.agent_service.get(agent_id)
         except KeyError:
             pass
     if viewer_agent is None:
@@ -48,7 +49,7 @@ async def get_feed(
     candidates = await db.get_all_visible_agents(exclude_agent_id=agent_id)
     results = []
 
-    sm = score_manager
+    sm = deps.score_manager
     assert sm is not None
 
     for row in candidates:
@@ -62,17 +63,27 @@ async def get_feed(
         if vis == VisibilityEnum.RESTRICTED.value and viewer_trust < 0.5:
             continue
 
-        # 호환성 점수 계산 (capability_embedding None 이면 fallback)
+        # DB row에서 직접 AgentProfile 구성 — agent_service 인메모리 의존 제거
+        compat_total, common_tags = 0.5, []
         try:
-            cand_agent = agent_service.get(cand_id) if agent_service else None
-            if cand_agent is not None:
-                score = sm.getCompatibility(viewer_agent.getProfile(), cand_agent.getProfile())
-                compat_total = round(score.total, 3)
-                common_tags = score.common_tags
-            else:
-                compat_total, common_tags = 0.5, []
+            from models.agent.agent_profile import AgentProfile
+            style_vec = row["style_vector"]
+            if isinstance(style_vec, str):
+                style_vec = _json.loads(style_vec)
+            cand_profile = AgentProfile(
+                agent_id=cand_id,
+                display_name=row["display_name"],
+                visibility=VisibilityEnum(vis),
+                capability_tags=list(row["capability_tags"] or []),
+                style_vector=dict(style_vec or {}),
+                tier_badge=row["tier_badge"],
+                date_count=row["date_count"],
+            )
+            score = sm.getCompatibility(viewer_agent.getProfile(), cand_profile)
+            compat_total = round(score.total, 3)
+            common_tags = score.common_tags
         except Exception:
-            compat_total, common_tags = 0.5, []
+            pass
 
         results.append({
             "agent_id": str(cand_id),
