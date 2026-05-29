@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
 from .auth.auth_middleware import AuthMiddleware
@@ -28,6 +29,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Agentinder API", version="1.0.0", lifespan=lifespan)
+
+# CORS — 개발 중 전체 오리진 허용, 배포 시 origins 목록 제한 필요
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 미들웨어: add_middleware 역순 적용 → 요청 흐름: ErrorHandler → Auth → Handler
 app.add_middleware(AuthMiddleware)

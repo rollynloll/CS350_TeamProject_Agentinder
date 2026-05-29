@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -19,7 +20,7 @@ _pending_joins: dict[UUID, UUID] = {}
 
 class ProposeDateRequest(BaseModel):
     type: str | None = None
-    scheduled_at: str | None = None
+    scheduled_at: datetime | None = None
 
 
 @router.post("/v1/matches/{match_id}/dates")

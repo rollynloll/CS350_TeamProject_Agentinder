@@ -75,7 +75,7 @@ async def get_principal(request: Request) -> Principal:
     profile = PrincipalProfile(
         email=row["email"],
         name=row["name"],
-        plan=PlanEnum(row["plan"]),
+        plan=PlanEnum(row["plan"].upper()),
     )
     principal = Principal(
         principal_id=pid,

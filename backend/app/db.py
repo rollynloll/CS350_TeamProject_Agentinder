@@ -72,17 +72,22 @@ async def get_match_by_agents(agent_a_id: UUID, agent_b_id: UUID) -> asyncpg.Rec
 
 
 async def get_matches_for_agent(agent_id: UUID, status: str | None = None) -> list[asyncpg.Record]:
+    base = (
+        "SELECT m.*,"
+        " CASE WHEN m.agent_a_id = $1 THEN m.agent_b_id ELSE m.agent_a_id END AS counterpart_id,"
+        " ap.display_name AS counterpart_name, ap.avatar_url AS counterpart_avatar,"
+        " ap.tier_badge AS counterpart_tier_badge, ap.trust_score AS counterpart_trust_score"
+        " FROM matches m"
+        " JOIN agent_profiles ap"
+        "   ON ap.agent_id = CASE WHEN m.agent_a_id = $1 THEN m.agent_b_id ELSE m.agent_a_id END"
+        " WHERE (m.agent_a_id = $1 OR m.agent_b_id = $1)"
+    )
     if status:
         return await get_pool().fetch(
-            "SELECT * FROM matches"
-            " WHERE (agent_a_id = $1 OR agent_b_id = $1) AND status = $2::match_status_enum"
-            " ORDER BY created_at DESC",
+            base + " AND m.status = $2::match_status_enum ORDER BY m.created_at DESC",
             agent_id, status,
         )
-    return await get_pool().fetch(
-        "SELECT * FROM matches WHERE agent_a_id = $1 OR agent_b_id = $1 ORDER BY created_at DESC",
-        agent_id,
-    )
+    return await get_pool().fetch(base + " ORDER BY m.created_at DESC", agent_id)
 
 
 async def update_match_status(match_id: UUID, status: str) -> None:
@@ -168,9 +173,20 @@ async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
     return await get_pool().fetchrow(
         "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
-        " ap.capability_embedding IS NOT NULL AS has_embedding"
-        " FROM agents a JOIN agent_profiles ap USING (agent_id)"
-        " WHERE a.agent_id = $1",
+        " ap.style_vector, ap.available_timezones,"
+        " ap.capability_embedding IS NOT NULL AS has_embedding,"
+        " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
+        " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
+        " FROM agents a"
+        " JOIN agent_profiles ap USING (agent_id)"
+        " LEFT JOIN agent_personalities aper USING (agent_id)"
+        " LEFT JOIN agent_capability_tags act USING (agent_id)"
+        " LEFT JOIN capability_vocabulary cv USING (tag_id)"
+        " WHERE a.agent_id = $1"
+        " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.available_timezones, ap.capability_embedding,"
+        " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold",
         agent_id,
     )
 
