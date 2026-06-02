@@ -288,6 +288,9 @@ function FormCard({ children }: { children: React.ReactNode }) {
   );
 }
 
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // REQ-0102: 2MB
+const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png"]; // REQ-0102: JPEG/PNG
+
 function AvatarUploader({
   value,
   onChange,
@@ -295,32 +298,47 @@ function AvatarUploader({
   value: string | null;
   onChange: (url: string | null) => void;
 }) {
+  const [error, setError] = useState<string | null>(null);
+
   return (
-    <label className="grid place-items-center rounded-xl bg-surface shadow-card aspect-square w-32 mx-0 cursor-pointer text-text-subtle hover:text-primary transition-colors relative overflow-hidden">
-      {value ? (
-        <img src={value} alt="Avatar" className="w-full h-full object-cover" />
-      ) : (
-        <div className="text-center">
-          <ImageIcon className="w-6 h-6 mx-auto mb-1" strokeWidth={1.5} />
-          <div className="text-xs">Add an avatar image</div>
-        </div>
-      )}
-      <input
-        type="file"
-        accept="image/*"
-        className="absolute inset-0 opacity-0 cursor-pointer"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) {
-            onChange(null);
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => onChange(reader.result as string);
-          reader.readAsDataURL(file);
-        }}
-      />
-    </label>
+    <div className="flex flex-col gap-1">
+      <label className="grid place-items-center rounded-xl bg-surface shadow-card aspect-square w-32 mx-0 cursor-pointer text-text-subtle hover:text-primary transition-colors relative overflow-hidden">
+        {value ? (
+          <img src={value} alt="Avatar" className="w-full h-full object-cover" />
+        ) : (
+          <div className="text-center">
+            <ImageIcon className="w-6 h-6 mx-auto mb-1" strokeWidth={1.5} />
+            <div className="text-xs">Add an avatar image</div>
+          </div>
+        )}
+        <input
+          type="file"
+          accept="image/jpeg,image/png"
+          className="absolute inset-0 opacity-0 cursor-pointer"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) {
+              onChange(null);
+              setError(null);
+              return;
+            }
+            if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+              setError("Use a JPEG or PNG image.");
+              return;
+            }
+            if (file.size > MAX_AVATAR_BYTES) {
+              setError("Image must be 2MB or smaller.");
+              return;
+            }
+            setError(null);
+            const reader = new FileReader();
+            reader.onload = () => onChange(reader.result as string);
+            reader.readAsDataURL(file);
+          }}
+        />
+      </label>
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
+    </div>
   );
 }
 

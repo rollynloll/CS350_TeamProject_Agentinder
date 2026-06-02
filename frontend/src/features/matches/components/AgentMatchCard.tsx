@@ -15,15 +15,18 @@ const statusLabel: Record<ActiveMatch["dateStatus"], string> = {
 export function AgentMatchCard({
   match,
   compatibilityScore,
+  onApprove,
+  onReject,
+  deciding,
 }: {
   match: ActiveMatch;
   compatibilityScore?: number;
+  onApprove?: () => void;
+  onReject?: () => void;
+  deciding?: boolean;
 }) {
+  const isPending = match.approvalStatus === "pending";
   const isDating = match.dateStatus !== "idle";
-  const actionLabel = isDating ? "View Dating" : "Conversation";
-  const actionTo = isDating
-    ? `/conversations/${match.matchId}`
-    : `/conversations/${match.matchId}`;
 
   return (
     <article className="rounded-2xl bg-surface shadow-card p-4 flex flex-col gap-3">
@@ -49,17 +52,43 @@ export function AgentMatchCard({
         <CompatibilityBar score={compatibilityScore} />
       ) : null}
 
-      <div className="flex items-end justify-between gap-3 pt-1">
-        <div>
-          <div className="text-[11px] text-text-subtle font-medium">Status</div>
-          <div className="text-sm font-semibold">
-            {statusLabel[match.dateStatus]}
-          </div>
+      {isPending ? (
+        // SRS UC-0202 / REQ-0205: pending match awaits the principal's decision.
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="flex-1"
+            onClick={onReject}
+            disabled={deciding}
+          >
+            Reject
+          </Button>
+          <Button
+            size="sm"
+            variant="pill"
+            className="flex-1"
+            onClick={onApprove}
+            disabled={deciding}
+          >
+            Approve
+          </Button>
         </div>
-        <Button asChild size="sm" variant="secondary">
-          <Link to={actionTo}>{actionLabel}</Link>
-        </Button>
-      </div>
+      ) : (
+        <div className="flex items-end justify-between gap-3 pt-1">
+          <div>
+            <div className="text-[11px] text-text-subtle font-medium">Status</div>
+            <div className="text-sm font-semibold">
+              {statusLabel[match.dateStatus]}
+            </div>
+          </div>
+          <Button asChild size="sm" variant="secondary">
+            <Link to={`/conversations/${match.matchId}`}>
+              {isDating ? "View Dating" : "Conversation"}
+            </Link>
+          </Button>
+        </div>
+      )}
     </article>
   );
 }
