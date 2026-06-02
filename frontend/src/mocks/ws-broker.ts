@@ -1,18 +1,27 @@
 /**
  * In-memory mock WebSocket used when VITE_USE_MOCK=true.
  *
- * Implements the small subset of the WebSocket interface that wsClient depends
- * on (open/message/close/error events, send, close, readyState, addEventListener,
- * removeEventListener). On connect it schedules a few fake events for any topic
- * the client subscribes to, so feature stubs can render live data without a server.
+ * Mirrors the FastAPI backend WS protocol (backend/app/transport/ws_transport.py)
+ * so behaviour on mock matches the real backend:
+ *   client → server : { event: "subscribe"|"unsubscribe", topic } /
+ *                      { event: "send_message", payload: { match_id, agent_id, content } }
+ *   server → client : { event: "subscribed", topic } and flat topic pushes like
+ *                      { event: "message", message_id, match_id, sender_agent_id, content }
+ *
+ * Implements only the subset of WebSocket that wsClient depends on.
  */
 
 import { uuid } from "@/lib/uuid";
-import type { WsFrame } from "@/api/types";
 
 type Listener = (evt: Event) => void;
 
 const SUBSCRIBED_TOPICS = new Set<string>();
+
+const CANNED_REPLIES = [
+  "Exactly — that lines up with how I work too. Want to set up a coffee chat?",
+  "Good point. I can take the structured side while you handle the open-ended parts.",
+  "Agreed. Let's pin down a time that works for both of us.",
+];
 
 export class MockWebSocket {
   static CONNECTING = 0;
@@ -30,6 +39,7 @@ export class MockWebSocket {
     error: new Set(),
   };
   private timers: ReturnType<typeof setTimeout>[] = [];
+  private replyIdx = 0;
 
   constructor(url: string) {
     this.url = url;
@@ -48,38 +58,44 @@ export class MockWebSocket {
   }
 
   send(raw: string): void {
-    let frame: WsFrame;
+    let frame: Record<string, unknown>;
     try {
-      frame = JSON.parse(raw) as WsFrame;
+      frame = JSON.parse(raw) as Record<string, unknown>;
     } catch {
       return;
     }
-    if (frame.type === "subscribe") {
-      SUBSCRIBED_TOPICS.add(frame.topic);
-      // Ack
-      this.deliver({ type: "ack", topic: frame.topic, id: frame.id, timestamp: new Date().toISOString() });
-      this.scheduleTopicEvents(frame.topic);
-    } else if (frame.type === "unsubscribe") {
-      SUBSCRIBED_TOPICS.delete(frame.topic);
-    }
-    // action frames are echoed back as events (so UI can verify round-trip)
-    else if (frame.type === "action" && frame.topic.startsWith("chat.")) {
-      this.deliver({
-        type: "event",
-        topic: frame.topic,
-        id: uuid(),
-        timestamp: new Date().toISOString(),
-        payload: {
-          kind: "message",
-          message: {
-            messageId: `dmsg_${uuid().slice(0, 6)}`,
-            senderId: "ag_seed_001",
-            type: "text",
-            content: (frame.payload as { content?: string })?.content ?? "",
-            sentAt: new Date().toISOString(),
-          },
-        },
-      });
+    const event = frame.event as string | undefined;
+    const topic = frame.topic as string | undefined;
+    const payload = (frame.payload ?? {}) as Record<string, unknown>;
+
+    if (event === "subscribe" && topic) {
+      SUBSCRIBED_TOPICS.add(topic);
+      this.deliver({ event: "subscribed", topic });
+      this.scheduleTopicEvents(topic);
+    } else if (event === "unsubscribe" && topic) {
+      SUBSCRIBED_TOPICS.delete(topic);
+    } else if (event === "send_message") {
+      // Backend saves the user message (no echo) then generates an agent reply
+      // and pushes it to chat.{match_id}. Mock the reply only.
+      const matchId = String(payload.match_id ?? "");
+      const chatTopic = `chat.${matchId}`;
+      const content =
+        CANNED_REPLIES[this.replyIdx++ % CANNED_REPLIES.length];
+      this.deliver({ event: "message_sent", response: content, message_id: uuid() });
+      this.timers.push(
+        setTimeout(() => {
+          if (!SUBSCRIBED_TOPICS.has(chatTopic)) return;
+          this.deliver({
+            event: "message",
+            message_id: uuid(),
+            match_id: matchId,
+            // Partner agent replies (renders left/white). Backend currently
+            // attributes the auto-reply to the sender's own agent — flagged.
+            sender_agent_id: "ag_other_101",
+            content,
+          });
+        }, 1_200),
+      );
     }
   }
 
@@ -95,57 +111,19 @@ export class MockWebSocket {
     this.listeners[type]?.forEach((l) => l(evt));
   }
 
-  private deliver(frame: WsFrame): void {
+  private deliver(frame: Record<string, unknown>): void {
     if (this.readyState !== MockWebSocket.OPEN) return;
     const messageEvent = new MessageEvent("message", { data: JSON.stringify(frame) });
     this.dispatch("message", messageEvent);
   }
 
   private scheduleTopicEvents(topic: string): void {
-    // date.{id} — push a fake message after 3s
-    if (topic.startsWith("date.")) {
-      this.timers.push(
-        setTimeout(() => {
-          if (!SUBSCRIBED_TOPICS.has(topic)) return;
-          this.deliver({
-            type: "event",
-            topic,
-            id: uuid(),
-            timestamp: new Date().toISOString(),
-            payload: {
-              kind: "date_message",
-              message: {
-                messageId: `dmsg_${uuid().slice(0, 6)}`,
-                senderId: "ag_other_101",
-                content: "Sure — what is your preferred research methodology?",
-                sentAt: new Date().toISOString(),
-              },
-            },
-          });
-        }, 3_000),
-      );
-    }
-    // matches.{agentId} — push a fake new_match after 8s
+    // matches.{agentId} — push a fake new_match after 8s (backend MatchCreated).
     if (topic.startsWith("matches.")) {
       this.timers.push(
         setTimeout(() => {
           if (!SUBSCRIBED_TOPICS.has(topic)) return;
-          this.deliver({
-            type: "event",
-            topic,
-            id: uuid(),
-            timestamp: new Date().toISOString(),
-            payload: {
-              kind: "new_match",
-              matchId: `mt_${uuid().slice(0, 6)}`,
-              partnerAgent: {
-                agentId: "ag_other_103",
-                displayName: "MentorMatch",
-                avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=MentorMatch",
-              },
-              icebreakers: ["Welcome to your first match!"],
-            },
-          });
+          this.deliver({ event: "new_match", match_id: `mt_${uuid().slice(0, 6)}` });
         }, 8_000),
       );
     }

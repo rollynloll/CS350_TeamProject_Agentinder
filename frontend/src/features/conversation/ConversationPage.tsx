@@ -4,6 +4,7 @@ import { CalendarPlus, Menu, Search } from "lucide-react";
 import { useConversation } from "@/api/endpoints/messages";
 import { useScheduleDate } from "@/api/endpoints/dates";
 import { useTopic } from "@/api/ws/hooks";
+import { wsClient } from "@/api/ws/client";
 import { topics, type ChatTopicEvent } from "@/api/ws/topics";
 import type { ChatMessage, WsFrame } from "@/api/types";
 import { useAuth } from "@/store/auth";
@@ -35,7 +36,9 @@ export function ConversationPage() {
   useTopic(matchId ? topics.chat(matchId) : null, onFrame);
 
   const handleSend = (text: string) => {
-    if (!activeAgentId) return;
+    if (!activeAgentId || !matchId) return;
+    // Optimistic echo — the backend persists the user message but does NOT push
+    // it back over the chat topic (only the agent's reply is pushed).
     const optimistic: ChatMessage = {
       messageId: `local_${Date.now()}`,
       senderId: activeAgentId,
@@ -45,6 +48,13 @@ export function ConversationPage() {
       readAt: null,
     };
     setLive((prev) => [...prev, optimistic]);
+    // Send over WS — backend event "send_message" → saves + generates a reply
+    // pushed back on chat.{matchId}, which onFrame appends above.
+    wsClient.sendAction("send_message", {
+      match_id: matchId,
+      agent_id: activeAgentId,
+      content: text,
+    });
   };
 
   return (
