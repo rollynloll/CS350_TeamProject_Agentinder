@@ -4,10 +4,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from .. import db
+from .. import db, deps
 from ..auth.authorization_policy import check_match_participant
 from ..auth.error_handler_middleware import envelope
-from ..deps import agent_service, get_auth, get_event_bus, get_principal
+from ..deps import get_auth, get_event_bus, get_principal
 from ..pubsub.domain_events import MessageCreated
 
 router = APIRouter(prefix="/v1/matches", tags=["messages"])
@@ -53,9 +53,9 @@ async def handle_send_message(
 
     # 에이전트 응답 생성 (결정 #3: V1 히스토리 미전달)
     sender_agent = next((a for a in principal.agents if a.agent_id == sender_agent_id), None)
-    if sender_agent is None and agent_service is not None:
+    if sender_agent is None and deps.agent_service is not None:
         try:
-            sender_agent = agent_service.get(sender_agent_id)
+            sender_agent = deps.agent_service.get(sender_agent_id)
         except KeyError:
             pass
     if sender_agent is None:

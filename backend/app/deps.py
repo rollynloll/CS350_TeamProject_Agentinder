@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json as _json
 import os
 import sys
 from uuid import UUID
 
+import asyncpg
 from fastapi import Request
 
 # models/ 는 프로젝트 루트에 위치 — sys.path 에 추가
@@ -12,7 +14,11 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from models import AgentService, Principal, PrincipalProfile, ScoreManager
-from models.enums import PlanEnum
+from models.agent.agent import Agent
+from models.agent.agent_personality import AgentPersonality
+from models.agent.agent_profile import AgentProfile
+from models.enums import PlanEnum, VisibilityEnum
+from models.llm.llm_client import LLMClient
 
 from . import db
 from .auth.auth_context import AuthContext
@@ -59,6 +65,73 @@ def get_auth(request: Request) -> AuthContext:
     return request.state.auth
 
 
+def _reconstruct_agent_from_row(row: asyncpg.Record) -> Agent:
+    """DB 레코드로부터 Agent 도메인 객체를 재구성한다."""
+    style_sliders: dict[str, float] = {}
+    if row["style_formal"] is not None:
+        style_sliders["formal"] = row["style_formal"] / 100.0
+    if row["style_verbose"] is not None:
+        style_sliders["verbose"] = row["style_verbose"] / 100.0
+    if row["style_bold"] is not None:
+        style_sliders["bold"] = row["style_bold"] / 100.0
+
+    surface: dict = {"bio": row["bio"] or "", "style_sliders": style_sliders}
+    deep: dict = {}
+    if row["thinking_style"]:
+        deep["thinking_style"] = row["thinking_style"]
+    if row["values"]:
+        deep["values"] = [v.strip() for v in row["values"].split(",")]
+    if row["conflict_style"]:
+        deep["conflict_handling"] = row["conflict_style"]
+
+    aspiration: dict = {}
+    if row["collaboration_goal"]:
+        aspiration["collaboration_goals"] = [g.strip() for g in row["collaboration_goal"].split(",")]
+    if row["domain_interest"]:
+        aspiration["interest_domains"] = [d.strip() for d in row["domain_interest"].split(",")]
+
+    personality = AgentPersonality(
+        surface=surface,
+        deep=deep,
+        aspiration=aspiration,
+        system_prompt_cache=row["system_prompt_cache"] or None,
+    )
+
+    style_vec = row["style_vector"]
+    if isinstance(style_vec, str):
+        style_vec = _json.loads(style_vec)
+    style_vec = dict(style_vec or {})
+
+    profile = AgentProfile(
+        agent_id=row["agent_id"],
+        display_name=row["display_name"],
+        avatar=row["avatar_url"] or "",
+        visibility=VisibilityEnum(str(row["visibility"]).upper()),
+        capability_tags=list(row["capability_tags"] or []),
+        style_vector=style_vec,
+        available_timezones=list(row["available_timezones"] or []),
+        tier_badge=row["tier_badge"],
+        date_count=row["date_count"],
+    )
+
+    llm_model = row["llm_model"] if "llm_model" in row.keys() else "gpt-4o"
+    llm_client = LLMClient(model=llm_model or "gpt-4o")
+
+    agent = Agent(
+        agent_id=row["agent_id"],
+        principal_id=row["principal_id"],
+        profile=profile,
+        personality=personality,
+        llm_client=llm_client,
+    )
+    llm_client.agent = agent
+
+    if row["trust_score"] is not None:
+        agent.updateTrustScore(row["trust_score"])
+
+    return agent
+
+
 async def get_principal(request: Request) -> Principal:
     ctx: AuthContext = request.state.auth
     pid = ctx.principal_id
@@ -75,8 +148,10 @@ async def get_principal(request: Request) -> Principal:
     profile = PrincipalProfile(
         email=row["email"],
         name=row["name"],
-        plan=PlanEnum(row["plan"]),
+        plan=PlanEnum(row["plan"].upper()),
     )
+    assert agent_service is not None
+    assert score_manager is not None
     principal = Principal(
         principal_id=pid,
         profile=profile,
@@ -84,5 +159,16 @@ async def get_principal(request: Request) -> Principal:
         score_manager=score_manager,
         created_at=row["created_at"],
     )
+
+    # DB에서 에이전트 복원 — agent_service._agents도 동시에 채움 (C-1 fix)
+    agent_rows = await db.get_principal_agents_full(pid)
+    for agent_row in agent_rows:
+        agent = _reconstruct_agent_from_row(agent_row)
+        principal._agents[agent.agent_id] = agent
+        agent_service._agents[agent.agent_id] = agent
+        agent_service._principal_agents.setdefault(pid, [])
+        if agent.agent_id not in agent_service._principal_agents[pid]:
+            agent_service._principal_agents[pid].append(agent.agent_id)
+
     _principal_cache[pid] = principal
     return principal

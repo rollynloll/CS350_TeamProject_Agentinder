@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -32,16 +33,55 @@ class UpdateAgentRequest(BaseModel):
     avatar: str | None = None
 
 
+def _personality_to_db(personality) -> dict:
+    surface = personality.surface
+    deep = personality.deep
+    aspiration = personality.aspiration
+    sliders = surface.get("style_sliders", {})
+    return {
+        "bio": surface.get("bio", ""),
+        "style_formal": int(sliders.get("formal", 0.5) * 100),
+        "style_verbose": int(sliders.get("verbose", 0.5) * 100),
+        "style_bold": int(sliders.get("bold", 0.5) * 100),
+        "thinking_style": deep.get("thinking_style"),
+        "values_text": ",".join(deep.get("values", [])) if deep.get("values") else None,
+        "conflict_style": deep.get("conflict_handling"),
+        "collaboration_goal": ",".join(aspiration.get("collaboration_goals", [])) if aspiration.get("collaboration_goals") else None,
+        "domain_interest": ",".join(aspiration.get("interest_domains", [])) if aspiration.get("interest_domains") else None,
+        "system_prompt_cache": personality.system_prompt_cache or "",
+    }
+
+
 @router.post("")
 async def create_agent(body: CreateAgentRequest, principal=Depends(get_principal)) -> dict:
     agent, api_key = principal.createAgent(body.model_dump())
     profile = agent.getProfile()
+    personality = agent.getPersonality()
+
+    vis = profile.visibility.value if hasattr(profile.visibility, "value") else str(profile.visibility)
+    pf = _personality_to_db(personality)
+
+    await db.insert_agent_full(
+        agent_id=agent.agent_id,
+        principal_id=agent.principal_id,
+        display_name=profile.display_name,
+        avatar_url=profile.avatar or "",
+        visibility=vis,
+        llm_model=body.llm_model or "gpt-4o",
+        style_vector=profile.style_vector,
+        available_timezones=profile.available_timezones,
+        api_key_hash=hashlib.sha256(api_key.encode()).hexdigest(),
+        **pf,
+    )
+    if profile.capability_tags:
+        await db.sync_capability_tags(agent.agent_id, profile.capability_tags)
+
     return envelope(data={
         "agent_id": str(agent.agent_id),
         "principal_id": str(agent.principal_id),
-        "api_key": api_key,  # 단 1회 반환
+        "api_key": api_key,
         "display_name": profile.display_name,
-        "visibility": profile.visibility.value if hasattr(profile.visibility, "value") else str(profile.visibility),
+        "visibility": vis,
         "tier_badge": profile.tier_badge,
     })
 
@@ -69,10 +109,28 @@ async def update_agent(
     profile_data = {k: v for k, v in body.model_dump().items() if v is not None}
     agent = principal.updateAgent(agent_id, profile_data)
     profile = agent.getProfile()
+    personality = agent.getPersonality()
+
+    vis = profile.visibility.value if hasattr(profile.visibility, "value") else str(profile.visibility)
+    pf = _personality_to_db(personality)
+
+    await db.upsert_agent_profile_row(
+        agent_id=agent.agent_id,
+        display_name=profile.display_name,
+        avatar_url=profile.avatar or "",
+        visibility=vis,
+        llm_model=body.llm_model or row["llm_model"] or "gpt-4o",
+        style_vector=profile.style_vector,
+        available_timezones=profile.available_timezones,
+        **pf,
+    )
+    if body.capability_tags is not None:
+        await db.sync_capability_tags(agent.agent_id, body.capability_tags)
+
     return envelope(data={
         "agent_id": str(agent.agent_id),
         "display_name": profile.display_name,
-        "visibility": profile.visibility.value if hasattr(profile.visibility, "value") else str(profile.visibility),
+        "visibility": vis,
         "tier_badge": profile.tier_badge,
     })
 

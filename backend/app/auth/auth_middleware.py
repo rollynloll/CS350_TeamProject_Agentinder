@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from ..config import settings
 from .auth_context import AuthContext
 
-_PUBLIC_PREFIXES = ("/healthz", "/v1/auth/")
+_PUBLIC_PREFIXES = ("/healthz", "/v1/auth/", "/docs", "/redoc", "/openapi.json")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

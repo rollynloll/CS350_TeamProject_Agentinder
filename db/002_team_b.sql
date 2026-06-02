@@ -100,12 +100,8 @@ CREATE TABLE agent_profiles (
     CONSTRAINT ck_date_count       CHECK (date_count >= 0)
 );
 
--- 같은 주인 내 display_name 중복 방지
--- agents.principal_id 를 통해 조인하는 부분 인덱스
-CREATE UNIQUE INDEX uq_agent_display_name_per_principal
-    ON agent_profiles (display_name, (
-        SELECT principal_id FROM agents WHERE agents.agent_id = agent_profiles.agent_id
-    ));
+-- 같은 주인 내 display_name 중복 방지는 AgentService 앱 레이어에서 enforce
+-- (PostgreSQL은 인덱스 표현식에 서브쿼리 미지원)
 
 -- 피드 조회 성능: visibility 필터 + embedding 벡터 검색
 CREATE INDEX idx_agent_profiles_visibility
