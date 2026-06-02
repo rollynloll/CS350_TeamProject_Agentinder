@@ -47,10 +47,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         sub = payload.get("sub")
         if not sub:
             raise ValueError("sub 클레임 없음")
+        email = payload.get("email")
         return AuthContext(
             principal_id=UUID(sub),
             role="principal",
             session_id=UUID(payload.get("session_id", sub)),
+            email=email,
             scopes=payload.get("scopes", []),
         )
 

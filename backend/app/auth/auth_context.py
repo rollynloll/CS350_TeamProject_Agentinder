@@ -11,6 +11,7 @@ class AuthContext:
     session_id: UUID
     principal_id: UUID | None = None
     agent_id: UUID | None = None
+    email: str | None = None
     scopes: list[str] = field(default_factory=list)
 
     def is_principal(self) -> bool:

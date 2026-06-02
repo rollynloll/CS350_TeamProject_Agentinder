@@ -3,3 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 backend/.env
+
+# 테스트/커버리지 산출물
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
