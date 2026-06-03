@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
+import { ensurePrincipal } from "@/api/endpoints/principals";
 import { wsClient } from "@/api/ws/client";
 import { useWsStatus } from "@/api/ws/hooks";
 import { cn } from "@/lib/cn";
@@ -41,8 +42,33 @@ export function AuthedLayout() {
       navigate("/login", { replace: true });
       return;
     }
-    wsClient.connect();
-    return () => wsClient.disconnect();
+    let cancelled = false;
+    // 로그인 직후 회원 레코드를 보장(멱등)한 뒤 WS를 연결한다.
+    // principal이 없는 상태로 WS가 붙어 인증 실패하는 것을 막는다.
+    void (async () => {
+      try {
+        const p = await ensurePrincipal();
+        if (!cancelled && p?.principal_id) {
+          // 백엔드(JWT sub) 기준 principal_id를 권위값으로 store에 반영.
+          // setSession/activeAgentId는 getState로 읽어 effect deps를 늘리지 않는다.
+          const { setSession, activeAgentId } = useAuth.getState();
+          setSession({
+            token,
+            principalId: p.principal_id,
+            activeAgentId: activeAgentId ?? undefined,
+          });
+        }
+      } catch (err) {
+        // 토큰 만료 등은 후속 API 호출에서 401로 처리된다.
+        console.error("ensurePrincipal failed", err);
+      } finally {
+        if (!cancelled) wsClient.connect();
+      }
+    })();
+    return () => {
+      cancelled = true;
+      wsClient.disconnect();
+    };
   }, [token, navigate]);
 
   useEffect(() => {

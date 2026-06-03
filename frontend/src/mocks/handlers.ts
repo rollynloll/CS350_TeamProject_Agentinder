@@ -3,7 +3,13 @@ import type { Envelope } from "@/api/types";
 import { uuid } from "@/lib/uuid";
 import { MIGRATE } from "@/api/migration-flags";
 import { agentProfiles, feedCards, myAgents } from "./fixtures/agents";
-import { activeMatches, conversation, liveDate, matchDates, relationships } from "./fixtures/matches";
+import {
+  activeMatches,
+  conversation,
+  liveDate,
+  matchDates,
+  relationships,
+} from "./fixtures/matches";
 import { analytics, settings } from "./fixtures/analytics";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "https://api.agentinder.io/v1";
@@ -37,6 +43,21 @@ const url = (path: string): string => `${BASE}${path}`;
 const when = (mocked: boolean, ...hs: RequestHandler[]): RequestHandler[] => (mocked ? hs : []);
 
 export const handlers: RequestHandler[] = [
+  // §3.0 회원가입 / Principal 보장 (멱등) — mock/real 모두 동일 흐름 유지
+  http.post(url("/principals"), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      name?: string;
+      email?: string;
+    };
+    return ok({
+      principal_id: import.meta.env.VITE_DEV_PRINCIPAL_ID ?? "pr_seed_dev",
+      email: body.email ?? "dev@agentinder.io",
+      name: body.name ?? "Dev User",
+      plan: "FREE",
+      created_at: new Date().toISOString(),
+    });
+  }),
+
   // §3.1 Feed
   ...when(
     !MIGRATE.feed,
@@ -74,7 +95,10 @@ export const handlers: RequestHandler[] = [
   ...when(
     !MIGRATE.agentsList,
     http.get(url("/principals/me/agents"), () =>
-      ok({ agents: myAgents }, { pagination: { nextCursor: null, hasMore: false, totalCount: myAgents.length } }),
+      ok(
+        { agents: myAgents },
+        { pagination: { nextCursor: null, hasMore: false, totalCount: myAgents.length } },
+      ),
     ),
   ),
 

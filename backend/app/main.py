@@ -31,18 +31,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Agentinder API", version="1.0.0", lifespan=lifespan)
 
-# CORS — 개발 중 전체 오리진 허용, 배포 시 origins 목록 제한 필요
+# 미들웨어 등록: add_middleware 는 LIFO — 나중에 추가한 것이 가장 바깥에서 먼저 실행된다.
+# 요청 흐름: CORS → ErrorHandler → Auth → Handler
+# CORS 를 가장 바깥에 두어야 preflight(OPTIONS, Authorization 헤더 없음)가
+# AuthMiddleware 의 401 에 막히지 않고 응답된다.
+app.add_middleware(AuthMiddleware)
+app.add_middleware(ErrorHandlerMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # 개발용 전체 허용 — 배포 시 origin 목록 제한 필요
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# 미들웨어: add_middleware 역순 적용 → 요청 흐름: ErrorHandler → Auth → Handler
-app.add_middleware(AuthMiddleware)
-app.add_middleware(ErrorHandlerMiddleware)
 
 app.include_router(auth_handler.router)
 app.include_router(principal_handler.router)

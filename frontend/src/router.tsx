@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthedLayout } from "./layouts/AuthedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { LoginPage } from "./features/login/LoginPage";
+import { AuthCallbackPage } from "./features/login/AuthCallbackPage";
 import { FeedPage } from "./features/feed/FeedPage";
 import { DiscoverPage } from "./features/discover/DiscoverPage";
 import { MyAgentsPage } from "./features/agents/MyAgentsPage";
@@ -25,7 +26,10 @@ import { AutoMatchPage } from "./features/settings/AutoMatchPage";
 export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
-    children: [{ path: "/login", element: <LoginPage /> }],
+    children: [
+      { path: "/login", element: <LoginPage /> },
+      { path: "/auth/callback", element: <AuthCallbackPage /> },
+    ],
   },
   {
     element: <AuthedLayout />,
