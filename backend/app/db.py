@@ -174,7 +174,7 @@ async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
     return await get_pool().fetchrow(
         "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
-        " ap.style_vector, ap.available_timezones,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model,"
         " ap.capability_embedding IS NOT NULL AS has_embedding,"
         " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
         " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
@@ -186,7 +186,7 @@ async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
         " WHERE a.agent_id = $1"
         " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
-        " ap.style_vector, ap.available_timezones, ap.capability_embedding,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model, ap.capability_embedding,"
         " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold",
         agent_id,
     )

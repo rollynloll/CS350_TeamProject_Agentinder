@@ -135,7 +135,7 @@ async def end_date(
             rater_principal_id=principal.principal_id,
             rated_agent_id=body.rated_agent_id,
             stars=body.rating_stars,
-            compatibility=int((body.rating_compatibility or 0.8) * 5),
+            compatibility=body.rating_compatibility or 0.8,
             comments="",
             issues=[],
         )
