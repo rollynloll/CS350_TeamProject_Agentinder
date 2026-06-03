@@ -38,9 +38,9 @@ export function StartDatePage() {
   const minTime = useMemo(() => nowLocalInput(), []);
 
   const start = () => {
-    if (!matchId || !time || schedule.isPending) return;
+    if (!matchId || schedule.isPending) return;
     schedule.mutate(
-      { type, proposedTime: new Date(time).toISOString(), message: task || undefined },
+      { type, proposedTime: time ? new Date(time).toISOString() : undefined, message: task || undefined },
       { onSuccess: () => navigate(`/conversations/${matchId}`) },
     );
   };
@@ -131,7 +131,7 @@ export function StartDatePage() {
         <button
           type="button"
           onClick={start}
-          disabled={!time || schedule.isPending}
+          disabled={schedule.isPending}
           className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
         >
           Start Date

@@ -170,7 +170,7 @@ export const handlers: RequestHandler[] = [
   ...when(
     !MIGRATE.dateSchedule,
     http.post(url("/matches/:matchId/dates"), async ({ request }) => {
-      const body = (await request.json()) as { type: string; proposedTime: string };
+      const body = (await request.json()) as { type: string; proposedTime?: string };
       return new HttpResponse(
         JSON.stringify({
           data: {

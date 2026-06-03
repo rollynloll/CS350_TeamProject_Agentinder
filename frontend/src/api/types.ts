@@ -333,7 +333,7 @@ export type LiveDateResponse = {
 
 export type ScheduleDateRequest = {
   type: DateType;
-  proposedTime: string;
+  proposedTime?: string;
   message?: string;
 };
 
@@ -341,7 +341,7 @@ export type ScheduleDateResponse = {
   dateId: DateId;
   status: DateStatus;
   type: DateType;
-  proposedTime: string;
+  proposedTime?: string | null;
 };
 
 export type EndDateRequest = {
