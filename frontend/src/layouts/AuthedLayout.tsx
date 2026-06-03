@@ -52,7 +52,11 @@ export function AuthedLayout() {
           // 백엔드(JWT sub) 기준 principal_id를 권위값으로 store에 반영.
           // setSession/activeAgentId는 getState로 읽어 effect deps를 늘리지 않는다.
           const { setSession, activeAgentId } = useAuth.getState();
-          setSession({ token, principalId: p.principal_id, activeAgentId: activeAgentId ?? undefined });
+          setSession({
+            token,
+            principalId: p.principal_id,
+            activeAgentId: activeAgentId ?? undefined,
+          });
         }
       } catch (err) {
         // 토큰 만료 등은 후속 API 호출에서 401로 처리된다.

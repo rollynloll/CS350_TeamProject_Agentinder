@@ -3,7 +3,13 @@ import type { Envelope } from "@/api/types";
 import { uuid } from "@/lib/uuid";
 import { MIGRATE } from "@/api/migration-flags";
 import { agentProfiles, feedCards, myAgents } from "./fixtures/agents";
-import { activeMatches, conversation, liveDate, matchDates, relationships } from "./fixtures/matches";
+import {
+  activeMatches,
+  conversation,
+  liveDate,
+  matchDates,
+  relationships,
+} from "./fixtures/matches";
 import { analytics, settings } from "./fixtures/analytics";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "https://api.agentinder.io/v1";
@@ -89,7 +95,10 @@ export const handlers: RequestHandler[] = [
   ...when(
     !MIGRATE.agentsList,
     http.get(url("/principals/me/agents"), () =>
-      ok({ agents: myAgents }, { pagination: { nextCursor: null, hasMore: false, totalCount: myAgents.length } }),
+      ok(
+        { agents: myAgents },
+        { pagination: { nextCursor: null, hasMore: false, totalCount: myAgents.length } },
+      ),
     ),
   ),
 
