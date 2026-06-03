@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useSettings, useUpdateSettings } from "@/api/endpoints/settings";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
-import { QueryBoundary } from "@/design-system/components/QueryBoundary";
+import { useAuth } from "@/store/auth";
+import { useSettingsStore } from "@/store/settings";
+import { uuid } from "@/lib/uuid";
 import { cn } from "@/lib/cn";
 import type { SettingsResponse } from "@/api/types";
 
@@ -10,48 +11,59 @@ import type { SettingsResponse } from "@/api/types";
  * Figma Settings (node 2064:1567): one scrolling page of neumorphic section
  * cards — Account, Auto Matching, Notification, API Key — each with inline
  * rows, 3D switches, sliders, and the emergency Kill Switch.
+ *
+ * Persistence: local only (Zustand `agentinder.settings`). The corresponding
+ * backend endpoint is unimplemented; wire it back when it lands.
  */
 export function SettingsPage() {
   const { t } = useTranslation();
-  const query = useSettings();
 
   return (
     <>
       <MobileHeader showBack title={t("settings.title")} />
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-8 space-y-4">
-        <QueryBoundary query={query}>{(data) => <Body data={data} />}</QueryBoundary>
+        <Body />
       </div>
     </>
   );
 }
 
-function Body({ data }: { data: SettingsResponse }) {
-  const update = useUpdateSettings();
+function Body() {
+  const account = useSettingsStore((s) => s.account);
+  const notifications = useSettingsStore((s) => s.notifications);
+  const preferences = useSettingsStore((s) => s.preferences);
+  const apiKeys = useSettingsStore((s) => s.apiKeys);
+  const updateNotifications = useSettingsStore((s) => s.updateNotifications);
+  const updatePreferences = useSettingsStore((s) => s.updatePreferences);
+  const addApiKey = useSettingsStore((s) => s.addApiKey);
+  const { logout } = useAuth();
+
+  // UI-only toggles that don't map to the persisted schema yet.
   const [mfa, setMfa] = useState(false);
   const [hideFromFeed, setHideFromFeed] = useState(false);
-  // Local mirrors so toggles/sliders react instantly (the mock mutation does
-  // not echo state back synchronously).
-  const [n, setN] = useState(data.notifications);
-  const auto = data.preferences.autoMatchRules;
-  const [autoEnabled, setAutoEnabled] = useState(auto.enabled);
-  const [trustFilter, setTrustFilter] = useState(Math.round(auto.minTrust * 100));
   const [autoLimit, setAutoLimit] = useState(2);
 
+  const trustFilter = Math.round(preferences.autoMatchRules.minTrust * 100);
+  const setTrustFilter = (v: number) =>
+    updatePreferences({
+      autoMatchRules: { ...preferences.autoMatchRules, minTrust: v / 100 },
+    });
+
   const toggleNotif = (key: keyof SettingsResponse["notifications"], v: boolean) => {
-    setN((prev) => ({ ...prev, [key]: v }));
-    update.mutate({ notifications: { [key]: v } });
+    updateNotifications({ [key]: v });
   };
 
-  // API keys: left = key name, right = its (masked) API key.
-  const [keys, setKeys] = useState(() =>
-    data.apiKeys.map((k) => ({ name: k.name, masked: "sk-••••••••••••" })),
-  );
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newKey, setNewKey] = useState("");
-  const addKey = () => {
+  const submitNewKey = () => {
     if (!newName.trim() || !newKey.trim()) return;
-    setKeys((prev) => [...prev, { name: newName.trim(), masked: maskKey(newKey.trim()) }]);
+    addApiKey({
+      keyId: uuid(),
+      name: newName.trim(),
+      lastUsedAt: null,
+      createdAt: new Date().toISOString(),
+    });
     setNewName("");
     setNewKey("");
     setAddOpen(false);
@@ -62,7 +74,7 @@ function Body({ data }: { data: SettingsResponse }) {
       {/* Account */}
       <Section title="Account">
         <SubGroup label="Profile">
-          <Row label="Email" value={data.account.email} />
+          <Row label="Email" value={account.email || "—"} muted={!account.email} />
           <Row label="MFA">
             <Switch checked={mfa} onChange={setMfa} />
           </Row>
@@ -78,6 +90,10 @@ function Body({ data }: { data: SettingsResponse }) {
           <GhostButton>Export</GhostButton>
         </Row>
         <Divider />
+        <Row label="Log Out">
+          <GhostButton onClick={() => logout()}>Log out</GhostButton>
+        </Row>
+        <Divider />
         <Row label="Delete Account">
           <GhostButton danger>Delete</GhostButton>
         </Row>
@@ -88,11 +104,12 @@ function Body({ data }: { data: SettingsResponse }) {
         <SubGroup label="Policy">
           <Row label="Auto">
             <Switch
-              checked={autoEnabled}
-              onChange={(v) => {
-                setAutoEnabled(v);
-                update.mutate({ preferences: { autoMatchRules: { ...auto, enabled: v } } });
-              }}
+              checked={preferences.autoMatchRules.enabled}
+              onChange={(v) =>
+                updatePreferences({
+                  autoMatchRules: { ...preferences.autoMatchRules, enabled: v },
+                })
+              }
             />
           </Row>
           <SliderRow label="Trust Filter" value={trustFilter} onChange={setTrustFilter} />
@@ -114,17 +131,26 @@ function Body({ data }: { data: SettingsResponse }) {
       {/* Notification */}
       <Section title="Notification">
         <Row label="New Match">
-          <Switch checked={n.matchAlerts} onChange={(v) => toggleNotif("matchAlerts", v)} />
+          <Switch
+            checked={notifications.matchAlerts}
+            onChange={(v) => toggleNotif("matchAlerts", v)}
+          />
         </Row>
         <Row label="Date Done">
-          <Switch checked={n.dateReminders} onChange={(v) => toggleNotif("dateReminders", v)} />
+          <Switch
+            checked={notifications.dateReminders}
+            onChange={(v) => toggleNotif("dateReminders", v)}
+          />
         </Row>
         <Row label="Trust Score Change">
-          <Switch checked={n.weeklyDigest} onChange={(v) => toggleNotif("weeklyDigest", v)} />
+          <Switch
+            checked={notifications.weeklyDigest}
+            onChange={(v) => toggleNotif("weeklyDigest", v)}
+          />
         </Row>
         <Row label="Relationship Change">
           <Switch
-            checked={n.messagePreview}
+            checked={notifications.messagePreview}
             onChange={(v) => toggleNotif("messagePreview", v)}
           />
         </Row>
@@ -133,10 +159,12 @@ function Body({ data }: { data: SettingsResponse }) {
       {/* API Key */}
       <Section title="API Key">
         <SubGroup label="KEY">
-          {keys.length === 0 ? (
+          {apiKeys.length === 0 ? (
             <Row label="No keys yet" value="" muted />
           ) : (
-            keys.map((k) => <Row key={k.name} label={k.name} value={k.masked} muted />)
+            apiKeys.map((k) => (
+              <Row key={k.keyId} label={k.name} value="sk-••••••••••••" muted />
+            ))
           )}
           {addOpen ? (
             <div className="flex flex-col gap-2 pt-1">
@@ -160,7 +188,7 @@ function Body({ data }: { data: SettingsResponse }) {
                 >
                   Cancel
                 </button>
-                <GhostButton onClick={addKey}>Add</GhostButton>
+                <GhostButton onClick={submitNewKey}>Add</GhostButton>
               </div>
             </div>
           ) : (
@@ -333,9 +361,4 @@ function GhostButton({
       {children}
     </button>
   );
-}
-
-function maskKey(key: string): string {
-  const head = key.slice(0, 4);
-  return `${head}${"•".repeat(Math.max(6, Math.min(12, key.length - 4)))}`;
 }

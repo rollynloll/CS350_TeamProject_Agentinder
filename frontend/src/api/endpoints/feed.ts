@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../client";
 import type { AgentId, FeedResponse, SwipeRequest, SwipeResponse } from "../types";
 import { MIGRATE } from "../migration-flags";
@@ -7,18 +7,26 @@ import type { BeFeedResponse, BeSwipeResponse } from "../adapters";
 
 export const feedKeys = {
   all: ["feed"] as const,
-  list: (agentId: AgentId, cursor?: string) => ["feed", agentId, cursor] as const,
+  list: (agentId: AgentId) => ["feed", agentId] as const,
 };
 
-export function useFeed(agentId: AgentId | undefined, cursor?: string) {
-  return useQuery({
-    queryKey: feedKeys.list(agentId ?? "", cursor),
-    queryFn: () =>
+const PAGE_SIZE = 20;
+
+export function useFeed(agentId: AgentId | undefined) {
+  return useInfiniteQuery({
+    queryKey: feedKeys.list(agentId ?? ""),
+    queryFn: ({ pageParam }) =>
       MIGRATE.feed
         ? api
-            .get<BeFeedResponse>(`/agents/${agentId}/feed`, { query: { cursor, limit: 20 } })
+            .get<BeFeedResponse>(`/agents/${agentId}/feed`, {
+              query: { cursor: pageParam, limit: PAGE_SIZE },
+            })
             .then(mapFeedResponse)
-        : api.get<FeedResponse>(`/feed/${agentId}`, { query: { cursor, limit: 20 } }),
+        : api.get<FeedResponse>(`/feed/${agentId}`, {
+            query: { cursor: pageParam, limit: PAGE_SIZE },
+          }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: Boolean(agentId),
   });
 }

@@ -61,7 +61,7 @@ export const handlers: RequestHandler[] = [
   // §3.1 Feed
   ...when(
     !MIGRATE.feed,
-    http.get(url("/feed/:agentId"), () => ok({ cards: feedCards })),
+    http.get(url("/feed/:agentId"), () => ok({ cards: feedCards, nextCursor: null })),
   ),
   ...when(
     !MIGRATE.swipe,

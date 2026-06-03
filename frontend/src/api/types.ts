@@ -105,7 +105,7 @@ export type PartnerAgent = {
 
 // ---- §3.1 Feed ----
 
-export type FeedResponse = { cards: FeedCard[] };
+export type FeedResponse = { cards: FeedCard[]; nextCursor: string | null };
 
 export type SwipeRequest = {
   targetAgentId: AgentId;

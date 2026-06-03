@@ -1,56 +1,38 @@
-import { useState } from "react";
 import * as Slider from "@radix-ui/react-slider";
-import { useSettings } from "@/api/endpoints/settings";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
-import { QueryBoundary } from "@/design-system/components/QueryBoundary";
-import type { SettingsResponse } from "@/api/types";
+import { useSettingsStore } from "@/store/settings";
 import { ToggleRow } from "./components/ToggleRow";
 
 export function AutoMatchPage() {
-  const query = useSettings();
+  const autoMatchRules = useSettingsStore((s) => s.preferences.autoMatchRules);
+  const updatePreferences = useSettingsStore((s) => s.updatePreferences);
+
+  const patch = (k: keyof typeof autoMatchRules, v: boolean | number) =>
+    updatePreferences({ autoMatchRules: { ...autoMatchRules, [k]: v } });
 
   return (
     <>
       <MobileHeader showBack title="Auto-match rule" />
       <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-6 space-y-3">
-        <QueryBoundary query={query}>
-          {(s) => <AutoMatchForm initial={s.preferences.autoMatchRules} />}
-        </QueryBoundary>
-      </div>
-    </>
-  );
-}
-
-function AutoMatchForm({
-  initial,
-}: {
-  initial: SettingsResponse["preferences"]["autoMatchRules"];
-}) {
-  const [values, setValues] = useState(initial);
-  return (
-    <>
-      <section className="rounded-2xl bg-surface shadow-card divide-y divide-border">
-        <ToggleRow
-          label="Auto-match enabled"
-          description="Automatically accept candidates that meet thresholds below."
-          enabled={values.enabled}
-          onToggle={(next) =>
-            setValues((prev) => ({ ...prev, enabled: next }))
-          }
+        <section className="rounded-2xl bg-surface shadow-card divide-y divide-border">
+          <ToggleRow
+            label="Auto-match enabled"
+            description="Automatically accept candidates that meet thresholds below."
+            enabled={autoMatchRules.enabled}
+            onToggle={(next) => patch("enabled", next)}
+          />
+        </section>
+        <ThresholdCard
+          label="Minimum compatibility"
+          value={autoMatchRules.minCompatibility}
+          onChange={(v) => patch("minCompatibility", v)}
         />
-      </section>
-      <ThresholdCard
-        label="Minimum compatibility"
-        value={values.minCompatibility}
-        onChange={(v) =>
-          setValues((prev) => ({ ...prev, minCompatibility: v }))
-        }
-      />
-      <ThresholdCard
-        label="Minimum trust"
-        value={values.minTrust}
-        onChange={(v) => setValues((prev) => ({ ...prev, minTrust: v }))}
-      />
+        <ThresholdCard
+          label="Minimum trust"
+          value={autoMatchRules.minTrust}
+          onChange={(v) => patch("minTrust", v)}
+        />
+      </div>
     </>
   );
 }

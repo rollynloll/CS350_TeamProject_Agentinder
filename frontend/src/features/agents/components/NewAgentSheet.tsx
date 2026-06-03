@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { useCreateAgent } from "@/api/endpoints/agents";
-import { useSettings } from "@/api/endpoints/settings";
+import { useSettingsStore } from "@/store/settings";
 
 /**
  * Empty "edit profile" form rendered INLINE in the Profile tab (not an overlay)
@@ -10,8 +10,8 @@ import { useSettings } from "@/api/endpoints/settings";
  */
 export function NewAgentForm({ onClose }: { onClose: () => void }) {
   const create = useCreateAgent();
-  const { data: settings } = useSettings();
-  const keyNames = settings?.apiKeys.map((k) => k.name) ?? [];
+  const apiKeys = useSettingsStore((s) => s.apiKeys);
+  const keyNames = apiKeys.map((k) => k.name);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [tags, setTags] = useState<string[]>([]);

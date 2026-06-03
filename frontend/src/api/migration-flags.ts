@@ -16,6 +16,7 @@ const flag = (v: unknown): boolean => ALL || on(v);
 
 export const MIGRATE = {
   feed: flag(import.meta.env.VITE_MIGRATE_FEED),
+  discover: flag(import.meta.env.VITE_MIGRATE_DISCOVER),
   swipe: flag(import.meta.env.VITE_MIGRATE_SWIPE),
   agentsList: flag(import.meta.env.VITE_MIGRATE_AGENTS_LIST),
   agentProfile: flag(import.meta.env.VITE_MIGRATE_AGENT_PROFILE),
