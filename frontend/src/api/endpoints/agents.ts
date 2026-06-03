@@ -7,6 +7,21 @@ import type {
   AgentProfile,
   AgentUpdateRequest,
 } from "../types";
+import { MIGRATE } from "../migration-flags";
+import {
+  mapAgentList,
+  mapAgentProfile,
+  mapCreateRequest,
+  mapCreateResponse,
+  mapUpdateRequest,
+  mapUpdateResponse,
+} from "../adapters";
+import type {
+  BeAgentListItem,
+  BeAgentProfile,
+  BeCreateAgentResponse,
+  BeUpdateAgentResponse,
+} from "../adapters";
 
 export const agentKeys = {
   all: ["agents"] as const,
@@ -17,14 +32,20 @@ export const agentKeys = {
 export function useMyAgents() {
   return useQuery({
     queryKey: agentKeys.myList(),
-    queryFn: () => api.get<AgentListResponse>(`/principals/me/agents`),
+    queryFn: () =>
+      MIGRATE.agentsList
+        ? api.get<BeAgentListItem[]>(`/agents`).then(mapAgentList)
+        : api.get<AgentListResponse>(`/principals/me/agents`),
   });
 }
 
 export function useAgentProfile(agentId: AgentId | undefined) {
   return useQuery({
     queryKey: agentKeys.profile(agentId ?? ""),
-    queryFn: () => api.get<AgentProfile>(`/agents/${agentId}/profile`),
+    queryFn: () =>
+      MIGRATE.agentProfile
+        ? api.get<BeAgentProfile>(`/agents/${agentId}`).then((be) => mapAgentProfile(be))
+        : api.get<AgentProfile>(`/agents/${agentId}/profile`),
     enabled: Boolean(agentId),
   });
 }
@@ -33,7 +54,11 @@ export function useCreateAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: AgentCreateRequest) =>
-      api.post<AgentProfile, AgentCreateRequest>(`/principals/me/agents`, body),
+      MIGRATE.agentCreate
+        ? api
+            .post<BeCreateAgentResponse>(`/agents`, mapCreateRequest(body))
+            .then((be) => mapCreateResponse(be, body))
+        : api.post<AgentProfile, AgentCreateRequest>(`/principals/me/agents`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: agentKeys.myList() });
     },
@@ -44,7 +69,13 @@ export function useUpdateAgent(agentId: AgentId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: AgentUpdateRequest) =>
-      api.put<AgentProfile, AgentUpdateRequest>(`/agents/${agentId}/profile`, body),
+      MIGRATE.agentUpdate
+        ? api
+            .patch<BeUpdateAgentResponse>(`/agents/${agentId}`, mapUpdateRequest(body))
+            .then((be) =>
+              mapUpdateResponse(be, qc.getQueryData<AgentProfile>(agentKeys.profile(agentId))),
+            )
+        : api.put<AgentProfile, AgentUpdateRequest>(`/agents/${agentId}/profile`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: agentKeys.profile(agentId) });
       qc.invalidateQueries({ queryKey: agentKeys.myList() });

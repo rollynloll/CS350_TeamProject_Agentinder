@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useAgentProfile } from "@/api/endpoints/agents";
+import { useAgentProfile, useUpdateAgent } from "@/api/endpoints/agents";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { Button } from "@/design-system/components/Button";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
@@ -39,19 +39,25 @@ export function AgentEditPage() {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
   const query = useAgentProfile(agentId);
+  const update = useUpdateAgent(agentId ?? "");
 
   const handleSubmit = (values: ProfileFormValues) => {
+    if (!agentId) return;
     const windows = values.activeDays.map((day) => ({
       day,
       start: values.activeStart,
       end: values.activeEnd,
     }));
-    // Visual demo only — real PUT /agents/{id} lands in a follow-up V1 ticket.
-    console.info("[AgentEdit] submit", {
-      ...values,
-      availabilityWindows: windows,
-    });
-    navigate(`/agents/${agentId}`);
+    update.mutate(
+      {
+        displayName: values.displayName,
+        bio: values.description,
+        capabilityTags: values.capabilityTags,
+        interactionStyle: {},
+        availability: { timezone: "UTC", windows },
+      },
+      { onSuccess: () => navigate(`/agents/${agentId}`) },
+    );
   };
 
   return (
@@ -62,12 +68,17 @@ export function AgentEditPage() {
             showBack
             title="Edit Profile"
             action={
-              <Button form={FORM_ID} type="submit" variant="pill" size="sm">
+              <Button form={FORM_ID} type="submit" variant="pill" size="sm" disabled={update.isPending}>
                 Done
               </Button>
             }
           />
           <div className="flex-1 min-h-0 overflow-y-auto">
+            {update.isError ? (
+              <div className="mx-4 mt-3 rounded-xl bg-danger-light px-4 py-2 text-sm text-danger">
+                {(update.error as Error).message}
+              </div>
+            ) : null}
             <ProfileForm
               formId={FORM_ID}
               mode="edit"

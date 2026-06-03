@@ -15,12 +15,17 @@ export type StatusHandler = (status: WsStatus) => void;
 /**
  * Singleton WebSocket manager.
  *
- * - Spec §4.1: query param `?token=<access_token>`
- * - Heartbeat ping every 30s; 3 consecutive failures → reconnect
- * - Exponential backoff reconnect (1, 2, 4, 8, 16, max 30s)
- * - Topic-multiplexed via subscribe/unsubscribe frames (§4.2)
+ * Speaks the FastAPI backend's WS protocol (backend/app/transport/ws_transport.py):
+ *   client → server : { event: "subscribe"|"unsubscribe", topic } and
+ *                      { event: "send_message"|"join_date", payload: {...} }
+ *   server → client : flat events keyed by `event`, e.g.
+ *                      { event: "message", message_id, match_id, sender_agent_id, content }
+ *                      { event: "subscribed", topic } (subscribe reply)
  *
- * Pluggable transport via WSConstructor lets tests/Mock supply a fake socket.
+ * Incoming pushes carry no `topic` field, so `adaptIncoming` derives the topic
+ * (e.g. chat.{match_id}) and maps the flat payload into the `{ kind, ... }`
+ * shape feature handlers expect. The Mock broker (mocks/ws-broker.ts) mirrors
+ * this exact protocol so dev-on-mock and real backend behave identically.
  */
 
 export type WSLike = Pick<WebSocket, "send" | "close" | "readyState"> & {
@@ -107,7 +112,7 @@ class WsClient {
       set = new Set();
       this.subs.set(topic, set);
       // First subscriber for this topic → send subscribe frame
-      this.sendFrame({ type: "subscribe", topic });
+      this.sendRaw({ event: "subscribe", topic });
       this.pendingSubs.add(topic);
     }
     set.add(handler);
@@ -118,13 +123,18 @@ class WsClient {
       current.delete(handler);
       if (current.size === 0) {
         this.subs.delete(topic);
-        this.sendFrame({ type: "unsubscribe", topic });
+        this.sendRaw({ event: "unsubscribe", topic });
       }
     };
   }
 
-  send(topic: string, payload: unknown): void {
-    this.sendFrame({ type: "action", topic, payload });
+  /**
+   * Send a backend action frame, e.g.
+   *   sendAction("send_message", { match_id, agent_id, content })
+   *   sendAction("join_date",    { date_id, agent_id })
+   */
+  sendAction(event: string, payload: Record<string, unknown>): void {
+    this.sendRaw({ event, payload });
   }
 
   // ---- internal ----
@@ -135,7 +145,8 @@ class WsClient {
     this.setStatus("open");
     // Re-subscribe to all topics on (re)connect
     for (const topic of this.subs.keys()) {
-      this.sendFrame({ type: "subscribe", topic });
+      this.sendRaw({ event: "subscribe", topic });
+      this.pendingSubs.add(topic);
     }
     this.startHeartbeat();
   };
@@ -143,19 +154,47 @@ class WsClient {
   private handleMessage = (evt: Event): void => {
     const data = (evt as MessageEvent).data;
     if (typeof data !== "string") return;
-    let frame: WsFrame;
+    let raw: Record<string, unknown>;
     try {
-      frame = JSON.parse(data) as WsFrame;
+      raw = JSON.parse(data) as Record<string, unknown>;
     } catch {
       return;
     }
-    if (frame.type === "ack" && this.pendingSubs.has(frame.topic)) {
-      this.pendingSubs.delete(frame.topic);
+
+    const event = raw.event as string | undefined;
+
+    // Subscribe ack / control replies and direct send replies — not topic events.
+    if (event === "subscribed") {
+      this.pendingSubs.delete(raw.topic as string);
       return;
     }
-    if (frame.type === "event" || frame.type === "ack") {
-      const handlers = this.subs.get(frame.topic);
-      if (!handlers) return;
+    if (event === "unsubscribed") return;
+    if (event === "message_sent" || event === "date_joined") return;
+    if (raw.error) {
+      console.warn("[ws] server error:", raw.error);
+      return;
+    }
+    if (!event) return;
+
+    // Topic-bound push — derive topic + adapt to the { kind, ... } shape.
+    const adapted = this.adaptIncoming(event, raw);
+    if (!adapted) return;
+
+    const frame: WsFrame = {
+      type: "event",
+      topic: adapted.topic,
+      payload: adapted.payload,
+      id: uuid(),
+      timestamp: new Date().toISOString(),
+    };
+
+    const targets =
+      adapted.topic === "*"
+        ? [...this.subs.values()]
+        : this.subs.has(adapted.topic)
+          ? [this.subs.get(adapted.topic)!]
+          : [];
+    for (const handlers of targets) {
       for (const h of handlers) {
         try {
           h(frame);
@@ -165,6 +204,56 @@ class WsClient {
       }
     }
   };
+
+  /**
+   * Map a flat backend event into (topic, frontend-shaped payload).
+   * Returns null for events with no client-side topic (e.g. notifications).
+   * topic === "*" means "deliver to every matching subscription" (used for
+   * new_match, which the backend keys by principal id rather than agent id).
+   */
+  private adaptIncoming(
+    event: string,
+    raw: Record<string, unknown>,
+  ): { topic: string; payload: unknown } | null {
+    switch (event) {
+      case "message":
+        return {
+          topic: `chat.${raw.match_id}`,
+          payload: {
+            kind: "message",
+            message: {
+              messageId: String(raw.message_id ?? uuid()),
+              senderId: String(raw.sender_agent_id ?? ""),
+              type: "text",
+              content: String(raw.content ?? ""),
+              sentAt: (raw.sent_at as string) ?? new Date().toISOString(),
+            },
+          },
+        };
+      case "new_match":
+        // Backend keys this by principal id; fan out to all matches.* subs.
+        return {
+          topic: "*",
+          payload: { kind: "new_match", matchId: String(raw.match_id ?? "") },
+        };
+      case "date_started":
+        return {
+          topic: `date.${raw.date_id}`,
+          payload: { kind: "date_started", dateId: String(raw.date_id ?? "") },
+        };
+      case "date_ended":
+        return {
+          topic: `date.${raw.date_id}`,
+          payload: {
+            kind: "date_ended",
+            outcome: String(raw.outcome ?? ""),
+            endedBy: "",
+          },
+        };
+      default:
+        return null;
+    }
+  }
 
   private handleClose = (): void => {
     this.stopHeartbeat();
@@ -187,18 +276,12 @@ class WsClient {
     this.reconnectTimer = setTimeout(() => this.connect(), delay);
   }
 
-  private sendFrame(partial: { type: WsFrame["type"]; topic: string; payload?: unknown }): void {
-    const frame: WsFrame = {
-      type: partial.type,
-      topic: partial.topic,
-      payload: partial.payload,
-      id: uuid(),
-      timestamp: new Date().toISOString(),
-    };
+  /** Emit a backend-shaped frame ({ event, topic?, payload? }). */
+  private sendRaw(frame: Record<string, unknown>): void {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(frame));
     }
-    // If socket not ready: subscribe frames will be replayed in handleOpen
+    // If socket not ready: subscribe frames are replayed in handleOpen.
   }
 
   private setStatus(s: WsStatus): void {
@@ -210,11 +293,11 @@ class WsClient {
   private startHeartbeat(): void {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
+      // Backend has no ping handler, so we only monitor socket health rather
+      // than emitting a frame (a junk frame would draw an error reply).
       if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
         this.heartbeatFails += 1;
       } else {
-        this.sendFrame({ type: "action", topic: "_ping" });
-        // Without server pong tracking we optimistically reset on send success.
         this.heartbeatFails = 0;
       }
       if (this.heartbeatFails >= HEARTBEAT_FAIL_LIMIT) {

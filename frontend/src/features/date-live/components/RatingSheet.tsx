@@ -21,16 +21,22 @@ export function RatingSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   partnerName: string;
-  onSubmit?: (data: { rating: number; outcome: Outcome; feedback: string }) => void;
+  onSubmit?: (data: {
+    rating: number;
+    outcome: Outcome;
+    feedback: string;
+    compatibility: number;
+  }) => void;
 }) {
   const [rating, setRating] = useState(0);
   const [outcome, setOutcome] = useState<Outcome>("neutral");
   const [feedback, setFeedback] = useState("");
+  const [compatibility, setCompatibility] = useState(3);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (rating === 0) return;
-    onSubmit?.({ rating, outcome, feedback });
+    onSubmit?.({ rating, outcome, feedback, compatibility });
     onOpenChange(false);
   };
 
@@ -106,6 +112,30 @@ export function RatingSheet({
                     )}
                   >
                     {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-text-muted mb-2">
+                Compatibility (1–5)
+              </div>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setCompatibility(n)}
+                    aria-label={`Compatibility ${n}`}
+                    className={cn(
+                      "flex-1 rounded-full py-2 text-sm font-semibold border transition-colors",
+                      n <= compatibility
+                        ? "bg-trust text-primary-fg border-trust"
+                        : "bg-surface text-text-muted border-border hover:bg-surface-2",
+                    )}
+                  >
+                    {n}
                   </button>
                 ))}
               </div>

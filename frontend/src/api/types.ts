@@ -221,6 +221,8 @@ export type ActiveMatch = {
   matchedAt: string;
   /** Mock-only — pending API spec extension. */
   compatibilityScore?: number;
+  /** Backend match approval status — drives the approve/reject controls. */
+  approvalStatus?: "pending" | "approved" | "rejected";
 };
 
 export type ActiveMatchesResponse = {
@@ -307,6 +309,7 @@ export type EndDateRequest = {
   action: "end";
   outcome: "successful" | "neutral" | "unsuccessful";
   rating: number;
+  compatibility?: number; // REQ-0307: compatibility 1–5
   feedback?: string;
 };
 
