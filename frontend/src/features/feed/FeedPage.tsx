@@ -55,7 +55,7 @@ export function FeedPage() {
   const like = (card: FeedCard) => {
     if (swipe.isPending) return;
     swipe.mutate(
-      { targetAgentId: card.agentId, action: "like" },
+      { targetAgentId: card.agentId, action: "super_like" },
       {
         onSuccess: (res) => {
           // A "Liked You" agent already liked you back — liking always matches.
