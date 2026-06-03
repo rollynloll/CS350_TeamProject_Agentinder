@@ -5,10 +5,11 @@ import logging
 from collections import defaultdict
 from uuid import UUID
 
+import httpx
 from fastapi import WebSocket
-from jose import JWTError, jwt
+from jose import JWTError
 
-from ..config import settings
+from ..auth.auth_middleware import AuthMiddleware
 from ..pubsub.domain_events import (
     DateEnded,
     DateProposed,
@@ -29,15 +30,13 @@ class WSGateway:
         self._topics: dict[str, set[WebSocket]] = defaultdict(set)
 
     async def on_connect(self, ws: WebSocket, token: str) -> UUID | None:
+        # REST AuthMiddleware와 동일한 alg-aware 검증을 사용한다.
+        # Supabase는 ES256(JWKS), dev JWT는 HS256(shared secret)으로 발급되므로
+        # 한쪽만 지원하면 다른 한쪽 토큰을 들고 온 클라이언트가 4001로 끊긴다.
         try:
-            payload = jwt.decode(
-                token,
-                settings.supabase_jwt_secret,
-                algorithms=["HS256"],
-                options={"verify_aud": False},
-            )
-            principal_id = UUID(payload["sub"])
-        except (JWTError, KeyError, ValueError):
+            ctx = await AuthMiddleware._verify(token)
+            principal_id = ctx.principal_id
+        except (JWTError, ValueError, KeyError, httpx.HTTPError):
             await ws.close(code=4001)
             return None
 
