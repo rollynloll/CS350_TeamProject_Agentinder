@@ -1,10 +1,9 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFeed, useSwipe } from "@/api/endpoints/feed";
 import { useMyAgents } from "@/api/endpoints/agents";
 import { useAuth } from "@/store/auth";
 import { EmptyState } from "@/design-system/components/EmptyState";
-import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { Spinner } from "@/design-system/components/Spinner";
 import { SwipeCard } from "@/design-system/components/SwipeCard";
 import { TopBar } from "@/design-system/components/TopBar";
@@ -14,7 +13,11 @@ import type { FeedCard } from "@/api/types";
 
 type MatchInfo = { matchId: string; partnerName: string; icebreakers: string[] | null };
 
-const THRESHOLD = 60; // px drag to flip to the adjacent card
+// Carousel sizing — main card ~85% of the shell, leaving ~7.5% peek on each side.
+// Mobile: vw (shell fills viewport). Desktop: fixed pixels (shell is 393px).
+const CARD_W = "w-[85vw] md:w-[334px]";
+const EDGE_PAD = "px-[7.5vw] md:px-[29px]";
+const SNAP_PAD = "scroll-pl-[7.5vw] scroll-pr-[7.5vw] md:scroll-pl-[29px] md:scroll-pr-[29px]";
 
 export function FeedPage() {
   const { activeAgentId } = useAuth();
@@ -23,13 +26,31 @@ export function FeedPage() {
   const swipe = useSwipe(activeAgentId ?? undefined);
   const [match, setMatch] = useState<MatchInfo | null>(null);
   const [detail, setDetail] = useState<FeedCard | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Horizontal filmstrip: all cards in a row, slid left/right by index.
-  const [index, setIndex] = useState(0);
-  const [drag, setDrag] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const start = useRef<{ x: number; y: number } | null>(null);
-  const moved = useRef(false);
+  // activeAgentId 가 없으면 AuthedLayout 의 자동선택이 완료될 때까지 기다린다.
+  // 에이전트가 아예 없는 경우는 생성 안내를 표시한다.
+  const { data: agentsData, isSuccess: agentsLoaded } = useMyAgents();
+
+  // Auto-fetch next page when the trailing sentinel scrolls into view.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0]?.isIntersecting &&
+          query.hasNextPage &&
+          !query.isFetchingNextPage
+        ) {
+          void query.fetchNextPage();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [query]);
 
   const like = (card: FeedCard) => {
     if (swipe.isPending) return;
@@ -50,96 +71,89 @@ export function FeedPage() {
     );
   };
 
-  // activeAgentId 가 없으면 AuthedLayout 의 자동선택이 완료될 때까지 기다린다.
-  // 에이전트가 아예 없는 경우(agentsLoaded & 빈 목록)는 에이전트 생성 안내를 표시한다.
-  const { data: agentsData, isSuccess: agentsLoaded } = useMyAgents();
   if (!activeAgentId) {
     if (agentsLoaded && (agentsData?.agents ?? []).length === 0) {
       return (
-        <PageScroll>
-          <EmptyState
-            title="에이전트를 먼저 만들어 주세요"
-            description="피드를 보려면 AI 에이전트를 먼저 생성해야 합니다."
-          />
-        </PageScroll>
+        <>
+          <TopBar />
+          <div className="flex-1 min-h-0 flex items-center px-5">
+            <EmptyState
+              title="에이전트를 먼저 만들어 주세요"
+              description="피드를 보려면 AI 에이전트를 먼저 생성해야 합니다."
+            />
+          </div>
+        </>
       );
     }
     return (
-      <div className="flex items-center justify-center py-12">
-        <Spinner />
-      </div>
+      <>
+        <TopBar />
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <Spinner />
+        </div>
+      </>
     );
   }
+
+  const renderBody = () => {
+    if (query.isLoading) {
+      return (
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <Spinner />
+        </div>
+      );
+    }
+    if (query.error) {
+      return (
+        <div className="flex-1 min-h-0 flex items-center px-5">
+          <EmptyState
+            title="Something went wrong"
+            description={(query.error as Error).message}
+          />
+        </div>
+      );
+    }
+    const cards = query.data?.pages.flatMap((p) => p.cards) ?? [];
+    if (cards.length === 0) {
+      return (
+        <div className="flex-1 min-h-0 flex items-center px-5">
+          <EmptyState
+            title="You've seen everyone!"
+            description="Check back later for new recommendations."
+          />
+        </div>
+      );
+    }
+    return (
+      <div
+        className={`flex-1 min-h-0 flex items-center overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide ${SNAP_PAD}`}
+      >
+        <div className={`flex items-stretch gap-3 ${EDGE_PAD}`}>
+          {cards.map((card) => (
+            <div
+              key={card.agentId}
+              onClick={() => setDetail(card)}
+              className={`shrink-0 snap-center cursor-pointer ${CARD_W}`}
+            >
+              <SwipeCard card={card} onLike={(l) => l && like(card)} />
+            </div>
+          ))}
+          <div
+            ref={sentinelRef}
+            aria-hidden
+            className="shrink-0 flex items-center justify-center w-12"
+          >
+            {query.isFetchingNextPage ? <Spinner /> : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
       <TopBar />
-      <QueryBoundary query={query}>
-        {(data) => {
-          const cards = data.cards;
-          if (cards.length === 0) {
-            return (
-              <div className="flex-1 min-h-0 flex items-center px-5">
-                <EmptyState
-                  title="You've seen everyone!"
-                  description="Check back later for new recommendations."
-                />
-              </div>
-            );
-          }
-
-          const onDown = (e: PointerEvent<HTMLDivElement>) => {
-            start.current = { x: e.clientX, y: e.clientY };
-            moved.current = false;
-            setDragging(true);
-            e.currentTarget.setPointerCapture(e.pointerId);
-          };
-          const onMove = (e: PointerEvent<HTMLDivElement>) => {
-            if (!start.current) return;
-            const dx = e.clientX - start.current.x;
-            if (Math.abs(dx) > 6) moved.current = true;
-            setDrag(dx);
-          };
-          const onUp = (e: PointerEvent<HTMLDivElement>) => {
-            if (!start.current) return;
-            const dx = e.clientX - start.current.x;
-            start.current = null;
-            setDragging(false);
-            setDrag(0);
-            if (moved.current) {
-              if (dx < -THRESHOLD && index < cards.length - 1) setIndex(index + 1);
-              else if (dx > THRESHOLD && index > 0) setIndex(index - 1);
-            } else {
-              // Tap (no drag) → open the centered card's detail.
-              const tappedHeart = (e.target as HTMLElement).closest("button[aria-pressed]");
-              if (!tappedHeart) setDetail(cards[index]);
-            }
-          };
-
-          return (
-            <div className="flex-1 min-h-0 overflow-hidden flex items-center">
-              <div
-                onPointerDown={onDown}
-                onPointerMove={onMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
-                style={{
-                  transform: `translateX(calc(${-index * 100}% + ${drag}px))`,
-                  transition: dragging ? "none" : "transform 0.3s ease-out",
-                  touchAction: "pan-y",
-                }}
-                className="flex w-full cursor-grab active:cursor-grabbing"
-              >
-                {cards.map((card) => (
-                  <div key={card.agentId} className="w-full shrink-0 px-5">
-                    <SwipeCard card={card} onLike={(l) => l && like(card)} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }}
-      </QueryBoundary>
+      {renderBody()}
 
       <AgentDetailSheet
         card={detail}

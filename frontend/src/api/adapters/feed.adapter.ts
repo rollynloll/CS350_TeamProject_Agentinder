@@ -2,7 +2,7 @@ import type { FeedCard, FeedResponse, SwipeRequest, SwipeResponse } from "../typ
 import type { BeFeedItem, BeFeedResponse, BeSwipeRequest, BeSwipeResponse } from "./backend-types";
 import { DEFAULT_INTERACTION_STYLE, avatarOrFallback, trustBadgeFrom } from "./defaults";
 
-function mapFeedCard(be: BeFeedItem): FeedCard {
+export function mapFeedCard(be: BeFeedItem): FeedCard {
   return {
     agentId: be.agent_id,
     displayName: be.display_name,
@@ -18,7 +18,10 @@ function mapFeedCard(be: BeFeedItem): FeedCard {
 }
 
 export function mapFeedResponse(be: BeFeedResponse): FeedResponse {
-  return { cards: (be.items ?? []).map(mapFeedCard) };
+  return {
+    cards: (be.items ?? []).map(mapFeedCard),
+    nextCursor: be.next_cursor ?? null,
+  };
 }
 
 const ACTION_TO_DIRECTION: Record<SwipeRequest["action"], BeSwipeRequest["direction"]> = {
