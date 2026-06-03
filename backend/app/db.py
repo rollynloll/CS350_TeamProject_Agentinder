@@ -227,6 +227,25 @@ async def get_principal_row(principal_id: UUID) -> asyncpg.Record | None:
     )
 
 
+async def upsert_principal(principal_id: UUID, email: str, name: str) -> asyncpg.Record:
+    """principals + principal_profiles 에 한 트랜잭션으로 멱등 INSERT 후 레코드 반환."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "INSERT INTO principals (principal_id) VALUES ($1)"
+                " ON CONFLICT (principal_id) DO NOTHING",
+                principal_id,
+            )
+            await conn.execute(
+                "INSERT INTO principal_profiles (principal_id, email, name)"
+                " VALUES ($1, $2, $3)"
+                " ON CONFLICT (principal_id) DO NOTHING",
+                principal_id, email, name,
+            )
+    return await get_principal_row(principal_id)
+
+
 async def get_principal_agents_full(principal_id: UUID) -> list[asyncpg.Record]:
     """principal의 모든 에이전트를 Agent 객체 재구성에 필요한 전체 필드와 함께 반환."""
     return await get_pool().fetch(

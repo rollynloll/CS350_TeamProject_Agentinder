@@ -16,6 +16,7 @@ from .handlers import (
     feed_handler,
     match_handler,
     message_handler,
+    principal_handler,
 )
 from .transport import ws_transport
 
@@ -44,6 +45,7 @@ app.add_middleware(AuthMiddleware)
 app.add_middleware(ErrorHandlerMiddleware)
 
 app.include_router(auth_handler.router)
+app.include_router(principal_handler.router)
 app.include_router(agent_profile_handler.router)
 app.include_router(feed_handler.router)
 app.include_router(match_handler.router)
