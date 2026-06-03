@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from uuid import UUID
 
@@ -8,10 +9,12 @@ from fastapi import Request, Response
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from .. import db
 from ..config import settings
 from .auth_context import AuthContext
 
 _PUBLIC_PREFIXES = ("/healthz", "/v1/auth/", "/docs", "/redoc", "/openapi.json")
+_AGENT_KEY_HEADER = "X-Agent-Key"
 
 # Supabase JWKS 캐시 (비대칭 ES256/RS256 서명키 검증용).
 # Supabase 신규 프로젝트는 JWT를 ES256(EC P-256) 공개키로 서명하므로,
@@ -68,6 +71,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in _PUBLIC_PREFIXES):
             return await call_next(request)
 
+        # 에이전트 API key 인증 (X-Agent-Key) — 유저 JWT 경로와 공존.
+        # 헤더가 있으면 에이전트 인증을 시도하고, JWT 경로로 폴백하지 않는다.
+        agent_key = request.headers.get(_AGENT_KEY_HEADER)
+        if agent_key:
+            try:
+                ctx = await self._verify_agent_key(agent_key)
+            except (KeyError, ValueError):
+                return _unauthorized("유효하지 않은 에이전트 API 키입니다.")
+            request.state.auth = ctx
+            return await call_next(request)
+
         token = self._extract_bearer(request)
         if not token:
             return _unauthorized("Bearer 토큰이 없습니다.")
@@ -84,6 +98,25 @@ class AuthMiddleware(BaseHTTPMiddleware):
     def _extract_bearer(request: Request) -> str | None:
         auth = request.headers.get("Authorization", "")
         return auth[7:] if auth.startswith("Bearer ") else None
+
+    @staticmethod
+    async def _verify_agent_key(api_key: str) -> AuthContext:
+        """X-Agent-Key 헤더의 API key 를 검증하고 에이전트 AuthContext 를 생성한다.
+
+        발급 시점과 동일한 sha256 hex 해시로 agent_credentials 를 조회한다.
+        매칭되는 자격증명이 없으면 KeyError 를 발생시킨다.
+        """
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+        row = await db.get_agent_by_api_key_hash(key_hash)
+        if row is None:
+            raise KeyError("매칭되는 에이전트 자격증명이 없습니다.")
+        agent_id = row["agent_id"]
+        return AuthContext(
+            role="agent",
+            session_id=agent_id,
+            agent_id=agent_id,
+            principal_id=row["principal_id"],
+        )
 
     @staticmethod
     async def _verify(token: str) -> AuthContext:

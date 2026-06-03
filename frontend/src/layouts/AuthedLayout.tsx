@@ -1,14 +1,11 @@
 import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  Compass,
-  Heart,
+  Home,
   MessageCircle,
-  Network,
+  Search,
   Settings as SettingsIcon,
-  Sparkles,
   UserSquare2,
-  BarChart3,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
@@ -20,14 +17,13 @@ import { topics } from "@/api/ws/topics";
 import { MobileShell } from "./MobileShell";
 import { BottomNav } from "@/design-system/components/BottomNav";
 
+// Figma primary nav: home / search / chat / profile, with settings via gear.
+// Relationships + Analytics live inside the Profile tab (not top-level nav).
 const sidebarItems = [
-  { to: "/", icon: Sparkles, key: "feed" },
-  { to: "/discover", icon: Compass, key: "discover" },
-  { to: "/agents", icon: UserSquare2, key: "agents" },
-  { to: "/matches", icon: Heart, key: "matches" },
-  { to: "/conversations/mt_seed_001", icon: MessageCircle, key: "conversation" },
-  { to: "/relationships", icon: Network, key: "relationships" },
-  { to: "/analytics", icon: BarChart3, key: "analytics" },
+  { to: "/", icon: Home, key: "home" },
+  { to: "/discover", icon: Search, key: "search" },
+  { to: "/matches", icon: MessageCircle, key: "chat" },
+  { to: "/agents", icon: UserSquare2, key: "profile" },
   { to: "/settings", icon: SettingsIcon, key: "settings" },
 ] as const;
 
@@ -82,12 +78,12 @@ export function AuthedLayout() {
 
   return (
     <div className="h-full flex overflow-hidden">
-      <aside className="hidden md:flex w-60 flex-col border-r border-border bg-surface">
-        <div className="px-5 py-4 border-b border-border">
-          <div className="text-lg font-bold tracking-tight">{t("app.name")}</div>
-          <div className="text-xs text-text-muted">{t("app.tagline")}</div>
+      <aside className="hidden md:flex w-60 flex-col border-r border-border bg-bg">
+        <div className="px-5 py-5">
+          <div className="text-h2 font-bold tracking-tight text-text">{t("app.name")}</div>
+          <div className="text-body2 text-text-muted">{t("app.tagline")}</div>
         </div>
-        <nav className="flex-1 py-3 space-y-1">
+        <nav className="flex-1 px-3 py-2 space-y-2">
           {sidebarItems.map((item) => (
             <NavLink
               key={item.to}
@@ -95,19 +91,19 @@ export function AuthedLayout() {
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 mx-2 px-3 py-2 rounded-md text-sm",
+                  "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-body1 transition-all",
                   isActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-text hover:bg-surface-2",
+                    ? "bg-surface shadow-inset text-primary font-semibold"
+                    : "text-text-muted hover:text-text hover:bg-surface hover:shadow-float",
                 )
               }
             >
-              <item.icon className="w-4 h-4" />
+              <item.icon className="w-[18px] h-[18px]" />
               <span>{t(`nav.${item.key}` as const, { defaultValue: item.key })}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="px-5 py-3 border-t border-border text-xs text-text-muted flex items-center justify-between">
+        <div className="mx-3 mb-4 px-4 py-3 rounded-xl bg-surface shadow-float text-body2 text-text-muted flex items-center justify-between">
           <span>WS</span>
           <span
             className={cn(

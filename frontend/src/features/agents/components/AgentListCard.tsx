@@ -16,14 +16,14 @@ export function AgentListCard({ agent }: { agent: AgentListItem }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Avatar src={agent.avatarUrl} name={agent.displayName} size="lg" />
-          <div className="font-bold text-base truncate">
+          <div className="font-bold text-h3 truncate">
             {agent.displayName}
           </div>
         </div>
         <TrustBadge score={agent.trustScore} />
       </div>
 
-      <p className="text-sm text-text-muted leading-relaxed line-clamp-2">
+      <p className="text-body1 text-text-muted leading-relaxed line-clamp-2">
         {agent.summary ?? agent.bioSnippet}
       </p>
 
@@ -32,7 +32,7 @@ export function AgentListCard({ agent }: { agent: AgentListItem }) {
           {agent.capabilityTags.slice(0, 4).map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center rounded-full bg-surface-2 px-3 py-1 text-xs font-medium text-text-muted"
+              className="inline-flex items-center rounded-full bg-surface-2 px-3 py-1 text-body2 font-medium text-text-muted"
             >
               {tag}
             </span>
@@ -43,7 +43,7 @@ export function AgentListCard({ agent }: { agent: AgentListItem }) {
       <div className="flex items-end justify-between gap-3 pt-1">
         <div>
           <div className="text-[11px] text-text-subtle font-medium">Status</div>
-          <div className="text-sm font-semibold">
+          <div className="text-body1 font-semibold">
             {agent.dateStatus ? statusLabel[agent.dateStatus] : "Doing Nothing"}
           </div>
         </div>

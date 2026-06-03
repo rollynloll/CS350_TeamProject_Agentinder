@@ -42,16 +42,15 @@ export function RatingSheet({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-40 animate-in fade-in" />
-        <Dialog.Content className="fixed bottom-0 inset-x-0 z-50 bg-bg rounded-t-3xl border-t border-border max-h-[90dvh] overflow-y-auto md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[393px]">
+      <Dialog.Overlay className="absolute inset-0 bg-black/50 z-40" />
+      <Dialog.Content className="absolute bottom-0 inset-x-0 top-[59px] z-50 bg-bg rounded-t-3xl border-t border-border overflow-y-auto focus:outline-none">
           <form onSubmit={handleSubmit} className="p-5 space-y-5">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <Dialog.Title className="text-lg font-bold">
+                <Dialog.Title className="text-h3 font-bold">
                   Rate this date
                 </Dialog.Title>
-                <Dialog.Description className="text-sm text-text-muted">
+                <Dialog.Description className="text-body1 text-text-muted">
                   How was your time with {partnerName}?
                 </Dialog.Description>
               </div>
@@ -67,7 +66,7 @@ export function RatingSheet({
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-text-muted mb-2">
+              <div className="text-body2 font-semibold text-text-muted mb-2">
                 Stars
               </div>
               <div className="flex gap-2">
@@ -95,7 +94,7 @@ export function RatingSheet({
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-text-muted mb-2">
+              <div className="text-body2 font-semibold text-text-muted mb-2">
                 Outcome
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -105,7 +104,7 @@ export function RatingSheet({
                     type="button"
                     onClick={() => setOutcome(opt.value)}
                     className={cn(
-                      "rounded-full px-3 py-2 text-sm font-semibold border transition-colors",
+                      "rounded-full px-3 py-2 text-body1 font-semibold border transition-colors",
                       outcome === opt.value
                         ? "bg-primary text-primary-fg border-primary"
                         : "bg-surface text-text-muted border-border hover:bg-surface-2",
@@ -118,7 +117,7 @@ export function RatingSheet({
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-text-muted mb-2">
+              <div className="text-body2 font-semibold text-text-muted mb-2">
                 Compatibility (1–5)
               </div>
               <div className="flex gap-2">
@@ -129,7 +128,7 @@ export function RatingSheet({
                     onClick={() => setCompatibility(n)}
                     aria-label={`Compatibility ${n}`}
                     className={cn(
-                      "flex-1 rounded-full py-2 text-sm font-semibold border transition-colors",
+                      "flex-1 rounded-full py-2 text-body1 font-semibold border transition-colors",
                       n <= compatibility
                         ? "bg-trust text-primary-fg border-trust"
                         : "bg-surface text-text-muted border-border hover:bg-surface-2",
@@ -144,7 +143,7 @@ export function RatingSheet({
             <div>
               <label
                 htmlFor="rating-feedback"
-                className="text-xs font-semibold text-text-muted mb-2 block"
+                className="text-body2 font-semibold text-text-muted mb-2 block"
               >
                 Comment (optional)
               </label>
@@ -155,7 +154,7 @@ export function RatingSheet({
                 rows={3}
                 maxLength={280}
                 placeholder="What stood out about this date?"
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm placeholder:text-text-subtle focus:outline-none focus:border-primary resize-none"
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-body1 placeholder:text-text-subtle focus:outline-none focus:border-primary resize-none"
               />
               <div className="text-[11px] text-text-subtle text-right mt-1 tabular-nums">
                 {feedback.length}/280
@@ -172,8 +171,7 @@ export function RatingSheet({
               Submit rating
             </Button>
           </form>
-        </Dialog.Content>
-      </Dialog.Portal>
+      </Dialog.Content>
     </Dialog.Root>
   );
 }

@@ -4,19 +4,19 @@ import { cn } from "@/lib/cn";
 const map: Record<Tier, { label: string; color: string }> = {
   stranger: {
     label: "Stranger",
-    color: "bg-tier-stranger-bg text-tier-stranger",
+    color: "bg-tier-stranger-bg text-tier-stranger-text",
   },
   acquaintance: {
     label: "Acquaintance",
-    color: "bg-tier-acquaintance-bg text-tier-acquaintance",
+    color: "bg-tier-acquaintance-bg text-tier-acquaintance-text",
   },
   colleague: {
     label: "Colleague",
-    color: "bg-tier-colleague-bg text-tier-colleague",
+    color: "bg-tier-colleague-bg text-tier-colleague-text",
   },
   trusted_partner: {
     label: "Trusted Partner",
-    color: "bg-tier-trusted-bg text-tier-trusted",
+    color: "bg-tier-trusted-bg text-tier-trusted-text",
   },
 };
 
@@ -31,7 +31,7 @@ export function TierBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex items-center justify-center rounded-[8px] px-2 py-1 text-[10px] leading-[1.4] font-semibold",
         item.color,
         className,
       )}

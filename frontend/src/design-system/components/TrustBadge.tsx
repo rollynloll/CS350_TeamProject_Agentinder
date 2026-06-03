@@ -16,7 +16,7 @@ export function TrustBadge({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-text-muted",
+          "inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-body2 font-semibold text-text-muted",
           className,
         )}
       >
@@ -36,7 +36,7 @@ export function TrustBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-body2 font-semibold tabular-nums",
         palette,
         className,
       )}

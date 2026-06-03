@@ -13,7 +13,17 @@ _pool: asyncpg.Pool | None = None
 
 async def init_pool() -> None:
     global _pool
-    _pool = await asyncpg.create_pool(settings.database_url, min_size=2, max_size=10)
+    # Supabase(Supavisor) pooler 호환:
+    #   - statement_cache_size=0: prepared statement 캐시 비활성
+    #     (Transaction pooler 6543 사용 시 필수, Session pooler 5432 에서도 안전)
+    #   - ssl="require": Supabase 는 TLS 를 강제하므로 암호화 연결을 요구
+    _pool = await asyncpg.create_pool(
+        settings.database_url,
+        min_size=2,
+        max_size=10,
+        statement_cache_size=0,
+        ssl="require",
+    )
 
 
 async def close_pool() -> None:
@@ -168,6 +178,22 @@ async def mark_messages_read(match_id: UUID, reader_agent_id: UUID) -> None:
     )
 
 
+# ── Agent credentials (API key 인증) ──────────────────────────────────────
+
+async def get_agent_by_api_key_hash(key_hash: str) -> asyncpg.Record | None:
+    """API key 해시로 에이전트를 조회한다. 매칭 시 (agent_id, principal_id) 반환.
+
+    해시는 발급 시점과 동일한 sha256 hex (AgentService._hash_key)를 전제로 한다.
+    """
+    return await get_pool().fetchrow(
+        "SELECT ac.agent_id, a.principal_id"
+        " FROM agent_credentials ac"
+        " JOIN agents a USING (agent_id)"
+        " WHERE ac.api_key_hash = $1",
+        key_hash,
+    )
+
+
 # ── Agents / Principals (B 소유 테이블 — 읽기 전용) ───────────────────────
 
 async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
@@ -206,6 +232,106 @@ async def get_all_visible_agents(exclude_agent_id: UUID) -> list[asyncpg.Record]
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url, ap.style_vector",
         exclude_agent_id,
     )
+
+
+async def get_agents_by_filters(
+    exclude_agent_id: UUID,
+    *,
+    capability_tags: list[str] | None = None,
+    trust_min: float | None = None,
+    trust_max: float | None = None,
+    style: str | None = None,
+    domain: str | None = None,
+    availability: str | None = None,
+    search_q: str | None = None,
+) -> list[asyncpg.Record]:
+    """필터 조건에 맞는 visible 에이전트를 조회한다 (Discover 검색).
+
+    get_all_visible_agents 의 확장판. 모든 필터는 AND 로 결합되며,
+    None 인 필터는 적용하지 않는다. 컬럼명은 하드코딩, 값은 파라미터 바인딩한다.
+
+    - capability_tags: 명시된 모든 태그를 보유한 에이전트만 (AND 매칭)
+    - trust_min/max:   agent_profiles.trust_score 범위
+    - style:           verbose|concise|formal|casual → style_verbose/style_formal(0~100) 임계값 매핑
+    - domain:          agent_personalities.domain_interest 부분일치
+    - search_q:        display_name / bio / domain_interest 부분일치
+    - availability:    'available' 이면 agent_availability 레코드 존재로 판정(best-effort).
+                       busy/offline 은 데이터 모델 부재로 필터링하지 않는다.
+    """
+    conditions = [
+        "a.agent_id != $1",
+        "ap.is_suspended = false",
+        "ap.visibility != 'hidden'",
+    ]
+    params: list[Any] = [exclude_agent_id]
+
+    def _ph() -> str:
+        """다음에 append 될 파라미터의 플레이스홀더 번호를 반환한다."""
+        return f"${len(params) + 1}"
+
+    if trust_min is not None:
+        conditions.append(f"ap.trust_score >= {_ph()}")
+        params.append(trust_min)
+    if trust_max is not None:
+        conditions.append(f"ap.trust_score <= {_ph()}")
+        params.append(trust_max)
+
+    if style:
+        style_map = {
+            "verbose": "aper.style_verbose >= 50",
+            "concise": "aper.style_verbose < 50",
+            "formal": "aper.style_formal >= 50",
+            "casual": "aper.style_formal < 50",
+        }
+        cond = style_map.get(style.lower())
+        if cond:
+            conditions.append(cond)
+
+    if domain:
+        conditions.append(f"aper.domain_interest ILIKE {_ph()}")
+        params.append(f"%{domain}%")
+
+    if search_q:
+        ph = _ph()
+        conditions.append(
+            f"(ap.display_name ILIKE {ph} OR aper.bio ILIKE {ph}"
+            f" OR aper.domain_interest ILIKE {ph})"
+        )
+        params.append(f"%{search_q}%")
+
+    if availability and availability.lower() == "available":
+        conditions.append(
+            "EXISTS (SELECT 1 FROM agent_availability aa WHERE aa.agent_id = a.agent_id)"
+        )
+
+    if capability_tags:
+        ph = _ph()
+        conditions.append(
+            "a.agent_id IN ("
+            " SELECT act2.agent_id FROM agent_capability_tags act2"
+            " JOIN capability_vocabulary cv2 USING (tag_id)"
+            f" WHERE cv2.name = ANY({ph})"
+            " GROUP BY act2.agent_id"
+            f" HAVING COUNT(DISTINCT cv2.name) = array_length({ph}, 1))"
+        )
+        params.append(capability_tags)
+
+    where_clause = " AND ".join(conditions)
+    query = (
+        "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector,"
+        " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
+        " FROM agents a"
+        " JOIN agent_profiles ap USING (agent_id)"
+        " LEFT JOIN agent_personalities aper USING (agent_id)"
+        " LEFT JOIN agent_capability_tags act USING (agent_id)"
+        " LEFT JOIN capability_vocabulary cv USING (tag_id)"
+        f" WHERE {where_clause}"
+        " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url, ap.style_vector"
+    )
+    return await get_pool().fetch(query, *params)
 
 
 async def get_principal_agents(principal_id: UUID) -> list[asyncpg.Record]:

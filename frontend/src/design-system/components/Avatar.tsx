@@ -4,10 +4,10 @@ import { cn } from "@/lib/cn";
 type Size = "sm" | "md" | "lg" | "xl";
 
 const sizeClass: Record<Size, string> = {
-  sm: "w-8 h-8 text-xs",
-  md: "w-10 h-10 text-sm",
-  lg: "w-14 h-14 text-base",
-  xl: "w-24 h-24 text-2xl",
+  sm: "w-8 h-8 text-body2",
+  md: "w-10 h-10 text-body1",
+  lg: "w-14 h-14 text-h3",
+  xl: "w-24 h-24 text-h2",
 };
 
 export function Avatar({

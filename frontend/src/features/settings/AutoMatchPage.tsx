@@ -67,8 +67,8 @@ function ThresholdCard({
   return (
     <section className="rounded-2xl bg-surface shadow-card p-4 space-y-3">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold text-text-muted">{label}</span>
-        <span className="text-2xl font-bold text-primary tabular-nums">
+        <span className="text-body2 font-semibold text-text-muted">{label}</span>
+        <span className="text-h2 font-bold text-primary tabular-nums">
           {value.toFixed(2)}
         </span>
       </div>

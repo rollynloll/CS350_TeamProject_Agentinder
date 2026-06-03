@@ -11,9 +11,9 @@ export function EmptyState({
 }) {
   return (
     <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center">
-      <h3 className="text-base font-semibold">{title}</h3>
+      <h3 className="text-h3 font-semibold">{title}</h3>
       {description ? (
-        <p className="text-sm text-text-muted mt-2 max-w-md mx-auto">{description}</p>
+        <p className="text-body1 text-text-muted mt-2 max-w-md mx-auto">{description}</p>
       ) : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>

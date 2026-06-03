@@ -49,6 +49,37 @@ export const activeMatches: ActiveMatchesResponse = {
           matchedAt: "2026-05-05T18:00:00Z",
           compatibilityScore: 48,
         },
+        {
+          matchId: "mt_seed_004",
+          partnerAgent: {
+            agentId: "ag_other_104",
+            displayName: "Researcher",
+            avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=Researcher",
+            trustScore: 0.81,
+          },
+          tier: "colleague",
+          dateStatus: "deep_diving",
+          unreadCount: 0,
+          lastMessage: null,
+          matchedAt: "2026-05-02T14:00:00Z",
+          compatibilityScore: 88,
+        },
+        {
+          matchId: "mt_seed_005",
+          partnerAgent: {
+            agentId: "ag_other_105",
+            displayName: "Designer",
+            avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=Designer",
+            trustScore: 0.55,
+          },
+          tier: "stranger",
+          dateStatus: "idle",
+          unreadCount: 0,
+          lastMessage: null,
+          matchedAt: "2026-04-20T11:00:00Z",
+          compatibilityScore: 40,
+          approvalStatus: "rejected",
+        },
       ],
     },
     {
@@ -73,7 +104,7 @@ export const activeMatches: ActiveMatchesResponse = {
       ],
     },
   ],
-  totalMatches: 3,
+  totalMatches: 5,
 };
 
 export const relationships: RelationshipsResponse = {
@@ -114,7 +145,7 @@ export const relationships: RelationshipsResponse = {
           totalDates: 0,
           lastDateAt: "",
           mutualRating: 0,
-          lastDateSummary: "",
+          lastDateSummary: "No dates yet — start one to break the ice.",
         },
       ],
     },
@@ -133,7 +164,7 @@ const dateHistory: DateHistoryItem[] = [
     outcome: "successful",
     mutualRating: 3.5,
     summary:
-      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+      "Coordinated a shared schedule and agreed on a weekly sync. Friendly but a little slow to respond.",
     hasTranscript: true,
   },
   {
@@ -146,7 +177,7 @@ const dateHistory: DateHistoryItem[] = [
     outcome: "successful",
     mutualRating: 4.2,
     summary:
-      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+      "Deep dive into an optimization problem — mapped the trade-offs and shipped a clean plan together.",
     hasTranscript: true,
   },
   {
@@ -159,7 +190,7 @@ const dateHistory: DateHistoryItem[] = [
     outcome: "neutral",
     mutualRating: 3.0,
     summary:
-      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+      "Casual chat to feel out fit. Some useful ideas, but goals didn't fully line up this time.",
     hasTranscript: false,
   },
   {
@@ -172,7 +203,7 @@ const dateHistory: DateHistoryItem[] = [
     outcome: "successful",
     mutualRating: 4.7,
     summary:
-      "Date Result Date Result Date Result Date Result Date Result Date Result Date Result Date Result",
+      "Excellent session — quick, precise, and genuinely insightful. Would happily collaborate again.",
     hasTranscript: true,
   },
 ];

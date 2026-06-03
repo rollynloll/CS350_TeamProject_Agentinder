@@ -41,8 +41,8 @@ export function ScheduleDateSheet({
           <form onSubmit={handleSubmit} className="p-5 space-y-5">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <Dialog.Title className="text-lg font-bold">Schedule a date</Dialog.Title>
-                <Dialog.Description className="text-sm text-text-muted">
+                <Dialog.Title className="text-h3 font-bold">Schedule a date</Dialog.Title>
+                <Dialog.Description className="text-body1 text-text-muted">
                   Propose a date type and time.
                 </Dialog.Description>
               </div>
@@ -58,7 +58,7 @@ export function ScheduleDateSheet({
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-text-muted mb-2">Type</div>
+              <div className="text-body2 font-semibold text-text-muted mb-2">Type</div>
               <div className="grid grid-cols-3 gap-2">
                 {dateTypes.map((opt) => (
                   <button
@@ -72,7 +72,7 @@ export function ScheduleDateSheet({
                         : "bg-surface text-text-muted border-border hover:bg-surface-2",
                     )}
                   >
-                    <div className="text-sm font-semibold">{opt.label}</div>
+                    <div className="text-body1 font-semibold">{opt.label}</div>
                     <div className="text-[10px] opacity-80">{opt.note}</div>
                   </button>
                 ))}
@@ -82,7 +82,7 @@ export function ScheduleDateSheet({
             <div>
               <label
                 htmlFor="schedule-time"
-                className="text-xs font-semibold text-text-muted mb-2 block"
+                className="text-body2 font-semibold text-text-muted mb-2 block"
               >
                 Proposed time
               </label>
@@ -91,7 +91,7 @@ export function ScheduleDateSheet({
                 type="datetime-local"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-body1 focus:outline-none focus:border-primary"
               />
             </div>
 

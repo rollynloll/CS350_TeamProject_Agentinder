@@ -18,11 +18,11 @@ export function DiscoverFilters({
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-text">Capability Tags</div>
+        <div className="text-body1 font-semibold text-text">Capability Tags</div>
         <button
           type="button"
           onClick={() => onChange([])}
-          className="text-xs font-medium text-text-subtle hover:text-text"
+          className="text-body2 font-medium text-text-subtle hover:text-text"
         >
           Reset
         </button>
@@ -36,7 +36,7 @@ export function DiscoverFilters({
               type="button"
               onClick={() => toggle(tag)}
               className={cn(
-                "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
+                "inline-flex items-center rounded-full px-3 py-1.5 text-body2 font-medium border transition-colors",
                 isSelected
                   ? "bg-text text-bg border-text"
                   : "bg-surface text-text-muted border-border hover:bg-surface-2",

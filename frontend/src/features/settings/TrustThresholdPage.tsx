@@ -23,14 +23,14 @@ function ThresholdForm({ initial }: { initial: number }) {
   const [value, setValue] = useState(initial);
   return (
     <section className="rounded-2xl bg-surface shadow-card p-4 space-y-4">
-      <p className="text-sm text-text-muted">
+      <p className="text-body1 text-text-muted">
         Only show matches whose trust score meets or exceeds this minimum.
       </p>
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold text-text-muted">
+        <span className="text-body2 font-semibold text-text-muted">
           Minimum trust
         </span>
-        <span className="text-2xl font-bold text-primary tabular-nums">
+        <span className="text-h2 font-bold text-primary tabular-nums">
           {value.toFixed(2)}
         </span>
       </div>

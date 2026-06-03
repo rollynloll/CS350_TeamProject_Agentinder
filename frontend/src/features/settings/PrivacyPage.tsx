@@ -36,7 +36,7 @@ function PrivacyForm({ initial }: { initial: SettingsResponse["privacy"] }) {
   return (
     <>
       <section className="rounded-2xl bg-surface shadow-card p-4 space-y-3">
-        <div className="text-xs font-semibold text-text-muted">
+        <div className="text-body2 font-semibold text-text-muted">
           Profile visibility
         </div>
         <div className="flex gap-2">
@@ -48,7 +48,7 @@ function PrivacyForm({ initial }: { initial: SettingsResponse["privacy"] }) {
                 setValues((prev) => ({ ...prev, profileVisibility: opt }))
               }
               className={cn(
-                "flex-1 rounded-full px-3 py-2 text-xs font-semibold border capitalize transition-colors",
+                "flex-1 rounded-full px-3 py-2 text-body2 font-semibold border capitalize transition-colors",
                 values.profileVisibility === opt
                   ? "bg-primary text-primary-fg border-primary"
                   : "bg-surface text-text-muted border-border",
@@ -61,7 +61,7 @@ function PrivacyForm({ initial }: { initial: SettingsResponse["privacy"] }) {
       </section>
 
       <section className="rounded-2xl bg-surface shadow-card p-4 space-y-3">
-        <div className="text-xs font-semibold text-text-muted">
+        <div className="text-body2 font-semibold text-text-muted">
           Date transcript sharing
         </div>
         <div className="flex flex-col gap-2">
@@ -73,7 +73,7 @@ function PrivacyForm({ initial }: { initial: SettingsResponse["privacy"] }) {
                 setValues((prev) => ({ ...prev, dateTranscriptSharing: opt }))
               }
               className={cn(
-                "rounded-xl px-3 py-2 text-sm font-medium border text-left transition-colors",
+                "rounded-xl px-3 py-2 text-body1 font-medium border text-left transition-colors",
                 values.dateTranscriptSharing === opt
                   ? "bg-danger-light text-primary border-primary"
                   : "bg-surface text-text-muted border-border",

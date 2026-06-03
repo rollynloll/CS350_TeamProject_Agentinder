@@ -28,6 +28,13 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+  /* Hide scrollbars everywhere — scrolling stays, the bar is invisible. */
+  *::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
 }
 
 @layer utilities {
