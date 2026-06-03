@@ -37,7 +37,7 @@ export function MobileHeader({
           <ChevronLeft className="w-5 h-5" />
         </button>
       ) : null}
-      <h1 className="flex-1 text-lg font-semibold tracking-tight truncate">
+      <h1 className="flex-1 text-h3 font-semibold tracking-tight truncate">
         {title}
       </h1>
       {action ? <div className="flex items-center gap-2">{action}</div> : null}

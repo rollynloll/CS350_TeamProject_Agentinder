@@ -126,7 +126,7 @@ export function ProfileForm({
       className="flex flex-col gap-3 px-4 pb-6 pt-2"
     >
       <FormCard>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-body1">
           <ChevronDown className="w-4 h-4 text-primary" />
           <select
             value={values.baseModel}
@@ -156,7 +156,7 @@ export function ProfileForm({
               ? defaultValues.apiKey || "API key"
               : "Enter API KEY. (Don't share with others)"
           }
-          className="w-full bg-transparent text-sm focus:outline-none"
+          className="w-full bg-transparent text-body1 focus:outline-none"
         />
       </FormCard>
 
@@ -172,7 +172,7 @@ export function ProfileForm({
           onChange={(e) => update("displayName", e.target.value.slice(0, MAX_NAME))}
           placeholder={`Enter agent name. (Max ${MAX_NAME} characters)`}
           maxLength={MAX_NAME}
-          className="w-full bg-transparent text-sm focus:outline-none"
+          className="w-full bg-transparent text-body1 focus:outline-none"
           required
         />
       </FormCard>
@@ -186,12 +186,12 @@ export function ProfileForm({
           rows={3}
           maxLength={MAX_DESCRIPTION}
           placeholder={`Enter agent description (Up to ${MAX_DESCRIPTION} characters)`}
-          className="w-full bg-transparent text-sm focus:outline-none resize-none"
+          className="w-full bg-transparent text-body1 focus:outline-none resize-none"
         />
       </FormCard>
 
       <FormCard>
-        <div className="text-xs text-text-muted mb-2">
+        <div className="text-body2 text-text-muted mb-2">
           Select up to {MAX_TAGS} capability tags
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -203,7 +203,7 @@ export function ProfileForm({
                 type="button"
                 onClick={() => toggleTag(tag)}
                 className={cn(
-                  "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+                  "inline-flex items-center rounded-full px-3 py-1 text-body2 font-medium border transition-colors",
                   selected
                     ? "bg-surface text-text border-primary"
                     : "bg-surface-2 text-text-muted border-transparent hover:border-border",
@@ -217,7 +217,7 @@ export function ProfileForm({
       </FormCard>
 
       <FormCard>
-        <div className="text-xs text-text-muted mb-3">
+        <div className="text-body2 text-text-muted mb-3">
           Define the agent&apos;s conversation style
         </div>
         <StyleSlider
@@ -238,7 +238,7 @@ export function ProfileForm({
       </FormCard>
 
       <FormCard>
-        <div className="text-xs text-text-muted mb-2">Active time</div>
+        <div className="text-body2 text-text-muted mb-2">Active time</div>
         <div className="flex gap-1.5 mb-3">
           {WEEKDAYS.map((day) => {
             const selected = values.activeDays.includes(day);
@@ -260,7 +260,7 @@ export function ProfileForm({
             );
           })}
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-body1">
           <input
             type="time"
             value={values.activeStart}
@@ -308,7 +308,7 @@ function AvatarUploader({
         ) : (
           <div className="text-center">
             <ImageIcon className="w-6 h-6 mx-auto mb-1" strokeWidth={1.5} />
-            <div className="text-xs">Add an avatar image</div>
+            <div className="text-body2">Add an avatar image</div>
           </div>
         )}
         <input
@@ -337,7 +337,7 @@ function AvatarUploader({
           }}
         />
       </label>
-      {error ? <p className="text-xs text-danger">{error}</p> : null}
+      {error ? <p className="text-body2 text-danger">{error}</p> : null}
     </div>
   );
 }

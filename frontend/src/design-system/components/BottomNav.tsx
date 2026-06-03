@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { Home, MessageSquare, Search, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -7,72 +6,74 @@ import { cn } from "@/lib/cn";
 type Tab = {
   to: string;
   icon: LucideIcon;
-  i18nKey: "my_page" | "home" | "chat" | "search";
+  label: string;
   isActive: (pathname: string) => boolean;
 };
 
+// Figma navigation_bar (node 2025:1098): icon-only, order home/search/chat/profile.
 const tabs: Tab[] = [
+  { to: "/", icon: Home, label: "Home", isActive: (p) => p === "/" },
   {
-    to: "/agents",
-    icon: User,
-    i18nKey: "my_page",
-    isActive: (p) =>
-      p.startsWith("/agents") ||
-      p.startsWith("/relationships") ||
-      p.startsWith("/analytics") ||
-      p.startsWith("/settings"),
+    to: "/discover",
+    icon: Search,
+    label: "Search",
+    isActive: (p) => p.startsWith("/discover"),
   },
-  { to: "/", icon: Home, i18nKey: "home", isActive: (p) => p === "/" },
   {
     to: "/matches",
     icon: MessageSquare,
-    i18nKey: "chat",
+    label: "Chat",
     isActive: (p) =>
       p.startsWith("/matches") ||
       p.startsWith("/conversations") ||
       p.startsWith("/dates"),
   },
   {
-    to: "/discover",
-    icon: Search,
-    i18nKey: "search",
-    isActive: (p) => p.startsWith("/discover"),
+    to: "/agents",
+    icon: User,
+    label: "Profile",
+    isActive: (p) =>
+      p.startsWith("/agents") ||
+      p.startsWith("/relationships") ||
+      p.startsWith("/analytics") ||
+      p.startsWith("/settings"),
   },
 ];
 
+/**
+ * Figma bottom nav (Rectangle 59 + navigation_bar): a 90px bar, four 44px
+ * icon-only tabs spread across it (no text labels), active filled / inactive
+ * muted outline.
+ */
 export function BottomNav() {
-  const { t } = useTranslation();
   const { pathname } = useLocation();
 
   return (
     <nav
       aria-label="Primary"
-      className="shrink-0 bg-surface border-t border-border px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      className="shrink-0 h-[90px] bg-surface shadow-elevated flex items-start justify-between px-5 pt-3 pb-[env(safe-area-inset-bottom)]"
     >
-      <ul className="flex items-center justify-around">
-        {tabs.map(({ to, icon: Icon, i18nKey, isActive }) => {
-          const active = isActive(pathname);
-          return (
-            <li key={to} className="flex-1">
-              <Link
-                to={to}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg text-[10px] font-medium transition-colors",
-                  active ? "text-primary" : "text-text-subtle",
-                )}
-              >
-                <Icon
-                  className="w-6 h-6"
-                  fill={active ? "currentColor" : "none"}
-                  strokeWidth={active ? 1.5 : 2}
-                />
-                <span>{t(`nav.${i18nKey}`)}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {tabs.map(({ to, icon: Icon, label, isActive }) => {
+        const active = isActive(pathname);
+        return (
+          <Link
+            key={to}
+            to={to}
+            aria-label={label}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "grid place-items-center w-11 h-11 transition-colors",
+              active ? "text-primary" : "text-text-subtle",
+            )}
+          >
+            <Icon
+              className="w-6 h-6"
+              fill={active ? "currentColor" : "none"}
+              strokeWidth={active ? 1.5 : 2}
+            />
+          </Link>
+        );
+      })}
     </nav>
   );
 }

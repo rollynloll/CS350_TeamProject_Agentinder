@@ -11,6 +11,8 @@ import { AgentDetailPage } from "./features/agents/AgentDetailPage";
 import { AgentEditPage } from "./features/agents/AgentEditPage";
 import { AnalyticsPage } from "./features/analytics/AnalyticsPage";
 import { MatchesPage } from "./features/matches/MatchesPage";
+import { StartDatePage } from "./features/matches/StartDatePage";
+import { DateResultPage } from "./features/matches/DateResultPage";
 import { ConversationPage } from "./features/conversation/ConversationPage";
 import { DateHistoryPage } from "./features/date-history/DateHistoryPage";
 import { DateLivePage } from "./features/date-live/DateLivePage";
@@ -42,6 +44,8 @@ export const router = createBrowserRouter([
       { path: "/agents/:agentId/edit", element: <AgentEditPage /> },
       { path: "/analytics", element: <AnalyticsPage /> },
       { path: "/matches", element: <MatchesPage /> },
+      { path: "/matches/:matchId/start", element: <StartDatePage /> },
+      { path: "/matches/:matchId/result", element: <DateResultPage /> },
       { path: "/conversations/:matchId", element: <ConversationPage /> },
       { path: "/matches/:matchId/history", element: <DateHistoryPage /> },
       { path: "/dates/:dateId", element: <DateLivePage /> },

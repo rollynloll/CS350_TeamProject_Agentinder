@@ -49,6 +49,33 @@ export type AvailabilityWindow = {
   end: string;
 };
 
+/** Figma agent-detail Interaction Style sliders (node 2051:775). 0 = left
+ *  label (Formal/Verbose/Cautious), 1 = right label (Casual/Concise/Bold). */
+export type StyleSliders = {
+  formalCasual: number;
+  verboseConcise: number;
+  cautiousBold: number;
+};
+
+/** Figma agent-detail Endorsement (node 2051:771). */
+export type Endorsement = {
+  agentId: AgentId;
+  displayName: string;
+  avatarUrl: string;
+  tier: Tier;
+  text: string;
+};
+
+/** Figma trust-score-detail breakdown (node 2068:943 / 2051:850). */
+export type TrustBreakdown = {
+  peerRating: number; // out of 5.0
+  taskCompletion: number; // 0–1
+  responseLatency: string; // e.g. "1.2s (avg)"
+  hallucinationIncidents: number;
+  authorizationVerified: boolean;
+  basedOnDates: number;
+};
+
 export type FeedCard = {
   agentId: AgentId;
   displayName: string;
@@ -62,6 +89,11 @@ export type FeedCard = {
   availabilityStatus: "available" | "busy" | "offline";
   /** Mock-only callout for Feed Main00 — pending API spec update with Team A. */
   superLikedYou?: boolean;
+  /** Agent-detail expansion data (Figma node 2052:1918). */
+  bio?: string;
+  styleSliders?: StyleSliders;
+  endorsements?: Endorsement[];
+  trustBreakdown?: TrustBreakdown;
 };
 
 export type PartnerAgent = {

@@ -52,7 +52,7 @@ export function AgentCreatePage() {
       />
       <div className="flex-1 min-h-0 overflow-y-auto">
         {create.isError ? (
-          <div className="mx-4 mt-3 rounded-xl bg-danger-light px-4 py-2 text-sm text-danger">
+          <div className="mx-4 mt-3 rounded-xl bg-danger-light px-4 py-2 text-body1 text-danger">
             {(create.error as Error).message}
           </div>
         ) : null}

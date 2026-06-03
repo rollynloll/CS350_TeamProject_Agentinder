@@ -57,7 +57,7 @@ export function DateLivePage() {
               title={data.partnerAgent.displayName}
               action={
                 <>
-                  <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-text shadow-card">
+                  <span className="rounded-full bg-surface px-3 py-1 text-body2 font-semibold text-text shadow-card">
                     {pillLabel}
                   </span>
                   <button
@@ -90,7 +90,7 @@ export function DateLivePage() {
               <button
                 type="button"
                 onClick={() => setShowRating(true)}
-                className="sticky bottom-2 ml-auto flex items-center gap-1.5 bg-primary text-primary-fg rounded-full px-4 py-2 text-sm font-bold shadow-elevated hover:opacity-90 active:opacity-80 transition-opacity"
+                className="sticky bottom-2 ml-auto flex items-center gap-1.5 bg-primary text-primary-fg rounded-full px-4 py-2 text-body1 font-bold shadow-elevated hover:opacity-90 active:opacity-80 transition-opacity"
               >
                 <Star className="w-4 h-4" fill="currentColor" strokeWidth={0} />
                 Rate

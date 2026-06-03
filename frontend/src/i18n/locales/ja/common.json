@@ -1,1 +1,8 @@
-{}
+{
+  "nav": {
+    "profile": "プロフィール",
+    "profile_edit": "編集",
+    "profile_analytics": "分析",
+    "profile_relationship": "関係"
+  }
+}

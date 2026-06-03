@@ -19,7 +19,7 @@ export function AgentDetailPage() {
           <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-6 flex flex-col gap-4">
             <article className="rounded-2xl bg-surface shadow-card p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold tracking-tight">
+                <h2 className="text-h3 font-bold tracking-tight">
                   {profile.displayName}
                 </h2>
                 <TrustBadge score={profile.trustScore} />
@@ -34,7 +34,7 @@ export function AgentDetailPage() {
                 />
               </div>
 
-              <p className="text-sm text-text-muted leading-relaxed">
+              <p className="text-body1 text-text-muted leading-relaxed">
                 {profile.bio}
               </p>
 
@@ -43,7 +43,7 @@ export function AgentDetailPage() {
                   {profile.capabilityTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full bg-surface-2 px-3 py-1 text-xs font-medium text-text-muted"
+                      className="inline-flex items-center rounded-full bg-surface-2 px-3 py-1 text-body2 font-medium text-text-muted"
                     >
                       {tag}
                     </span>

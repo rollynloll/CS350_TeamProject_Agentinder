@@ -1,44 +1,65 @@
-import { useTranslation } from "react-i18next";
-import { useActiveMatches, useApproveMatch, useRejectMatch } from "@/api/endpoints/matches";
+import { Link } from "react-router-dom";
+import { Settings as SettingsIcon } from "lucide-react";
+import { useActiveMatches } from "@/api/endpoints/matches";
+import { useMyAgents } from "@/api/endpoints/agents";
 import { useAuth } from "@/store/auth";
-import { MobileHeader } from "@/design-system/components/MobileHeader";
+import { NotificationButton } from "@/design-system/components/NotificationButton";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { AgentMatchCard } from "./components/AgentMatchCard";
+import type { ActiveMatch } from "@/api/types";
+
+type Row = ActiveMatch & { myAvatarUrl?: string };
 
 export function MatchesPage() {
-  const { t } = useTranslation();
   const { activeAgentId } = useAuth();
   const query = useActiveMatches(activeAgentId ?? undefined);
-  const approve = useApproveMatch();
-  const reject = useRejectMatch();
-  const deciding = approve.isPending || reject.isPending;
+  const { data: agents } = useMyAgents();
+
+  const avatarOf = (agentId: string) =>
+    agents?.agents.find((a) => a.agentId === agentId)?.avatarUrl;
 
   return (
     <>
-      <MobileHeader title={t("matches.title")} />
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-6 space-y-6">
+      <header className="shrink-0 flex items-center justify-end gap-1 px-5 pt-4 pb-1">
+        <NotificationButton />
+        <Link
+          to="/settings"
+          aria-label="Open settings"
+          className="grid place-items-center w-11 h-11 rounded-full text-text hover:bg-surface transition-colors"
+        >
+          <SettingsIcon className="w-6 h-6" strokeWidth={1.75} />
+        </Link>
+      </header>
+
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-6 space-y-6">
         <QueryBoundary query={query}>
-          {(data) =>
-            data.sections.map((section) => (
-              <section key={section.agentId} className="space-y-3">
-                <h2 className="text-sm font-semibold text-text-muted">
-                  {section.title}
-                </h2>
-                <div className="space-y-3">
-                  {section.matches.map((m) => (
-                    <AgentMatchCard
-                      key={m.matchId}
-                      match={m}
-                      compatibilityScore={m.compatibilityScore}
-                      deciding={deciding}
-                      onApprove={() => approve.mutate(m.matchId)}
-                      onReject={() => reject.mutate(m.matchId)}
-                    />
+          {(data) => {
+            const all: Row[] = data.sections.flatMap((s) =>
+              s.matches.map((m) => ({ ...m, myAvatarUrl: avatarOf(s.agentId) })),
+            );
+            const active = all.filter((m) => m.approvalStatus !== "rejected");
+            const past = all.filter((m) => m.approvalStatus === "rejected");
+
+            return (
+              <>
+                <section className="space-y-3">
+                  <h2 className="text-h2 font-bold text-text">Active Matches</h2>
+                  {active.map((m) => (
+                    <AgentMatchCard key={m.matchId} match={m} myAvatarUrl={m.myAvatarUrl} />
                   ))}
-                </div>
-              </section>
-            ))
-          }
+                </section>
+
+                {past.length > 0 ? (
+                  <section className="space-y-3">
+                    <h2 className="text-h2 font-bold text-text">Past Matches</h2>
+                    {past.map((m) => (
+                      <AgentMatchCard key={m.matchId} match={m} myAvatarUrl={m.myAvatarUrl} />
+                    ))}
+                  </section>
+                ) : null}
+              </>
+            );
+          }}
         </QueryBoundary>
       </div>
     </>

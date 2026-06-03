@@ -33,7 +33,7 @@ export function CompatibilityBar({
           />
         </div>
       </div>
-      <span className="text-2xl font-bold text-primary tabular-nums leading-none">
+      <span className="text-h2 font-bold text-primary tabular-nums leading-none">
         {display}
       </span>
     </div>

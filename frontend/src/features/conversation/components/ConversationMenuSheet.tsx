@@ -15,19 +15,20 @@ type Item = {
 export function ConversationMenuSheet({
   open,
   onOpenChange,
-  partnerAgentId,
   matchId,
+  onViewProfile,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   partnerAgentId?: string;
   matchId?: string;
+  onViewProfile?: () => void;
 }) {
   const items: Item[] = [
     {
       icon: UserCircle2,
       label: "View partner profile",
-      to: partnerAgentId ? `/agents/${partnerAgentId}` : undefined,
+      onClick: onViewProfile,
     },
     {
       icon: History,
@@ -46,16 +47,14 @@ export function ConversationMenuSheet({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Dialog.Content
-          className={cn(
-            "fixed top-0 right-0 z-50 h-full w-[80%] max-w-[320px] bg-bg border-l border-border shadow-elevated",
-            "md:right-[max(0px,calc(50vw-393px/2))] md:rounded-l-3xl md:max-h-[calc(100dvh-3rem)] md:top-6",
-          )}
-        >
+      <Dialog.Overlay className="absolute inset-0 bg-black/50 z-40" />
+      <Dialog.Content
+        className={cn(
+          "absolute top-0 right-0 bottom-0 z-50 w-[80%] max-w-[320px] bg-bg border-l border-border shadow-elevated focus:outline-none",
+        )}
+      >
           <div className="flex items-center justify-between gap-2 px-4 h-14 border-b border-border">
-            <Dialog.Title className="text-base font-semibold">
+            <Dialog.Title className="text-h3 font-semibold">
               Conversation menu
             </Dialog.Title>
             <Dialog.Close asChild>
@@ -76,7 +75,7 @@ export function ConversationMenuSheet({
               const body = (
                 <span
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 px-4 py-3 text-body1 font-medium transition-colors",
                     danger ? "text-danger" : "text-text",
                     "hover:bg-surface-2",
                   )}
@@ -108,8 +107,7 @@ export function ConversationMenuSheet({
               );
             })}
           </ul>
-        </Dialog.Content>
-      </Dialog.Portal>
+      </Dialog.Content>
     </Dialog.Root>
   );
 }

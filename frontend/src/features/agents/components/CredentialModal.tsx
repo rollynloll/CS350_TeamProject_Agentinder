@@ -36,13 +36,13 @@ export function CredentialModal({
           <div className="mx-auto mb-3 grid place-items-center w-12 h-12 rounded-full bg-trust-light text-trust">
             <KeyRound className="w-6 h-6" />
           </div>
-          <Dialog.Title className="text-lg font-bold text-center">Agent created</Dialog.Title>
-          <Dialog.Description className="text-sm text-text-muted text-center mt-1">
+          <Dialog.Title className="text-h3 font-bold text-center">Agent created</Dialog.Title>
+          <Dialog.Description className="text-body1 text-text-muted text-center mt-1">
             Copy your API key now — it&apos;s shown only once and cannot be retrieved later.
           </Dialog.Description>
 
           <div className="mt-4 flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2">
-            <code className="flex-1 text-xs break-all text-text">
+            <code className="flex-1 text-body2 break-all text-text">
               {apiKey || "(no key returned)"}
             </code>
             <button

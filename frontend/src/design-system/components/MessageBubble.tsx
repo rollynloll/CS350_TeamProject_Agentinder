@@ -18,7 +18,7 @@ export function MessageBubble({
     <div className={cn("flex w-full", mine ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words shadow-card",
+          "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-body1 leading-relaxed whitespace-pre-wrap break-words shadow-card",
           mine ? "bg-danger-light text-text" : "bg-surface text-text",
           className,
         )}

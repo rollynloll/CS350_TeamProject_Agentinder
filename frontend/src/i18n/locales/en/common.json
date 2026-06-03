@@ -15,7 +15,11 @@
     "my_page": "My Page",
     "home": "Home",
     "chat": "Chat",
-    "search": "Search"
+    "search": "Search",
+    "profile": "Profile",
+    "profile_edit": "Edit",
+    "profile_analytics": "Analytics",
+    "profile_relationship": "Relationship"
   },
   "common": {
     "loading": "Loading…",

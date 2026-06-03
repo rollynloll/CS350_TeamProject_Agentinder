@@ -15,7 +15,11 @@
     "my_page": "내 페이지",
     "home": "홈",
     "chat": "채팅",
-    "search": "검색"
+    "search": "검색",
+    "profile": "프로필",
+    "profile_edit": "편집",
+    "profile_analytics": "분석",
+    "profile_relationship": "관계"
   },
   "common": {
     "loading": "불러오는 중…",

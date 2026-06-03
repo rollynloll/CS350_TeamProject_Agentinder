@@ -39,7 +39,7 @@ export function ChatInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm placeholder:text-text-subtle focus:outline-none py-2"
+          className="flex-1 bg-transparent text-body1 placeholder:text-text-subtle focus:outline-none py-2"
         />
         <button
           type="submit"

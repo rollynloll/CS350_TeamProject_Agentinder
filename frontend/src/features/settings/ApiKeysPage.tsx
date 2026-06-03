@@ -16,18 +16,18 @@ export function ApiKeysPage() {
             <>
               <section className="rounded-2xl bg-surface shadow-card divide-y divide-border">
                 {s.apiKeys.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-sm text-text-muted">
+                  <div className="px-4 py-6 text-center text-body1 text-text-muted">
                     No API keys yet.
                   </div>
                 ) : (
                   s.apiKeys.map((k) => (
                     <div
                       key={k.keyId}
-                      className="flex items-center justify-between px-4 py-3 text-sm"
+                      className="flex items-center justify-between px-4 py-3 text-body1"
                     >
                       <div className="min-w-0">
                         <div className="font-medium text-text">{k.name}</div>
-                        <div className="text-xs text-text-muted">
+                        <div className="text-body2 text-text-muted">
                           {k.lastUsedAt
                             ? `Last used ${new Date(k.lastUsedAt).toLocaleDateString()}`
                             : "Never used"}

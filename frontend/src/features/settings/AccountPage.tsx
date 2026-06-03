@@ -44,7 +44,7 @@ export function AccountPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3 text-sm">
+    <div className="flex items-center justify-between px-4 py-3 text-body1">
       <span className="text-text-muted">{label}</span>
       <span className="font-medium text-text truncate ml-3">{value}</span>
     </div>

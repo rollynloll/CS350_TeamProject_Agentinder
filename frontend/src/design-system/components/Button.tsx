@@ -19,10 +19,11 @@ const variantClass: Record<Variant, string> = {
   pill: "bg-primary text-primary-fg hover:opacity-90 active:opacity-80 rounded-full",
 };
 
+// Figma type scale: caption 10 / body2 12 / body1 14 / h3 16.
 const sizeClass: Record<Size, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
+  sm: "h-8 px-3 text-body2",
+  md: "h-10 px-4 text-body1",
+  lg: "h-12 px-6 text-body1",
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(

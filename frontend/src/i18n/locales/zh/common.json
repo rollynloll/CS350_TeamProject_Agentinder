@@ -1,1 +1,8 @@
-{}
+{
+  "nav": {
+    "profile": "个人资料",
+    "profile_edit": "编辑",
+    "profile_analytics": "分析",
+    "profile_relationship": "关系"
+  }
+}

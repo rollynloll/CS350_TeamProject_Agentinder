@@ -33,7 +33,7 @@ export function CompatibilityRing({ score }: { score: number }) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute text-sm font-semibold tabular-nums">{pct}</span>
+      <span className="absolute text-body1 font-semibold tabular-nums">{pct}</span>
     </div>
   );
 }
