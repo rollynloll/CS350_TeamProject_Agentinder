@@ -61,17 +61,27 @@ def build_app(
     principal_id: UUID,
     *,
     event_bus: EventBus | None = None,
+    auth_ctx: AuthContext | None = None,
 ) -> FastAPI:
-    """테스트용 FastAPI 앱을 구성한다."""
+    """테스트용 FastAPI 앱을 구성한다.
+
+    auth_ctx 미지정 시 소유자 principal 인증 컨텍스트를 주입한다.
+    에이전트(X-Agent-Key) 인증 케이스는 auth_ctx 로 role="agent" 컨텍스트를 전달한다.
+    """
     app = FastAPI()
     app.include_router(router)
 
     fake_principal = MagicMock()
     fake_principal.principal_id = principal_id
 
-    from app.deps import get_event_bus, get_principal
+    ctx = auth_ctx or AuthContext(
+        role="principal", session_id=principal_id, principal_id=principal_id
+    )
+
+    from app.deps import get_auth, get_event_bus, get_principal
     app.dependency_overrides[get_principal] = lambda: fake_principal
     app.dependency_overrides[get_event_bus] = lambda: event_bus or EventBus()
+    app.dependency_overrides[get_auth] = lambda: ctx
 
     return app
 
@@ -390,3 +400,65 @@ class TestSwipeValidation:
 
         # "RIGHT".lower() = "right" → 정상 처리
         assert resp.status_code == 200
+
+
+class TestSwipeAgentAuth:
+    """X-Agent-Key(role="agent") 인증으로 스와이프하는 경우의 권한 검사."""
+
+    async def test_agent_can_swipe_with_own_agent_id(self) -> None:
+        """에이전트는 자기 자신(agent_id)으로 스와이프할 수 있다."""
+        agent_id = uuid4()
+        principal_id = uuid4()
+        target_id = uuid4()
+
+        agent_ctx = AuthContext(
+            role="agent", session_id=agent_id, agent_id=agent_id, principal_id=principal_id
+        )
+        app = build_app(agent_id, principal_id, auth_ctx=agent_ctx)
+
+        with patch("app.handlers.feed_handler.db") as mock_db:
+            mock_db.get_agent_row = AsyncMock(
+                return_value=make_agent_row(agent_id, principal_id)
+            )
+            mock_db.insert_swipe = AsyncMock()
+            mock_db.get_counter_swipe = AsyncMock(return_value=None)
+
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                resp = await client.post(
+                    f"/v1/agents/{agent_id}/swipe",
+                    json={"target_id": str(target_id), "direction": "right"},
+                )
+
+        assert resp.status_code == 200
+        assert resp.json()["data"]["swiped"] is True
+
+    async def test_agent_cannot_swipe_as_other_agent(self) -> None:
+        """다른 에이전트 id 로는 스와이프할 수 없다 (PermissionError)."""
+        agent_id = uuid4()        # path 의 대상 에이전트
+        other_agent_id = uuid4()  # 인증된 에이전트(본인)
+        principal_id = uuid4()
+        target_id = uuid4()
+
+        # 인증 주체는 other_agent_id 인데 path 는 agent_id → 거부되어야 함
+        agent_ctx = AuthContext(
+            role="agent", session_id=other_agent_id,
+            agent_id=other_agent_id, principal_id=principal_id,
+        )
+        app = build_app(agent_id, principal_id, auth_ctx=agent_ctx)
+
+        with patch("app.handlers.feed_handler.db") as mock_db:
+            mock_db.get_agent_row = AsyncMock(
+                return_value=make_agent_row(agent_id, principal_id)
+            )
+            mock_db.insert_swipe = AsyncMock()
+
+            with pytest.raises(PermissionError):
+                async with AsyncClient(
+                    transport=ASGITransport(app=app), base_url="http://test"
+                ) as client:
+                    await client.post(
+                        f"/v1/agents/{agent_id}/swipe",
+                        json={"target_id": str(target_id), "direction": "right"},
+                    )
