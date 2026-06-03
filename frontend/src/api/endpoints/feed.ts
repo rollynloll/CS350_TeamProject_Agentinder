@@ -4,6 +4,7 @@ import type { AgentId, FeedResponse, SwipeRequest, SwipeResponse } from "../type
 import { MIGRATE } from "../migration-flags";
 import { mapFeedResponse, mapSwipeRequest, mapSwipeResponse } from "../adapters";
 import type { BeFeedResponse, BeSwipeResponse } from "../adapters";
+import { matchKeys } from "./matches";
 
 export const feedKeys = {
   all: ["feed"] as const,
@@ -40,8 +41,10 @@ export function useSwipe(agentId: AgentId | undefined) {
             .post<BeSwipeResponse>(`/agents/${agentId}/swipe`, mapSwipeRequest(body))
             .then(mapSwipeResponse)
         : api.post<SwipeResponse, SwipeRequest>(`/feed/${agentId}/swipe`, body),
-    onSuccess: () => {
+    onSuccess: (res) => {
       if (agentId) qc.invalidateQueries({ queryKey: feedKeys.list(agentId) });
+      // 매치가 성사된 swipe라면 채팅 탭(useActiveMatches)도 즉시 새로고침해야 한다.
+      if (res.matched) qc.invalidateQueries({ queryKey: matchKeys.all });
     },
   });
 }

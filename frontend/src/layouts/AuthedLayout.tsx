@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Home,
   MessageCircle,
@@ -11,10 +12,12 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
 import { ensurePrincipal } from "@/api/endpoints/principals";
 import { useMyAgents } from "@/api/endpoints/agents";
+import { matchKeys } from "@/api/endpoints/matches";
 import { wsClient } from "@/api/ws/client";
 import { useWsStatus } from "@/api/ws/hooks";
 import { cn } from "@/lib/cn";
-import { topics } from "@/api/ws/topics";
+import { topics, type MatchTopicEvent } from "@/api/ws/topics";
+import type { WsFrame } from "@/api/types";
 import { MobileShell } from "./MobileShell";
 import { BottomNav } from "@/design-system/components/BottomNav";
 
@@ -82,12 +85,22 @@ export function AuthedLayout() {
     };
   }, [token, navigate]);
 
+  // 새 매치 알림(WS new_match) 들어오면 채팅 탭의 useActiveMatches 캐시를 무효화해
+  // 사용자가 탭을 옮기지 않아도 곧바로 새 매치가 보이게 한다.
+  const qc = useQueryClient();
+  const onMatchFrame = useCallback(
+    (frame: WsFrame) => {
+      const payload = frame.payload as MatchTopicEvent | undefined;
+      if (payload?.kind === "new_match") {
+        qc.invalidateQueries({ queryKey: matchKeys.all });
+      }
+    },
+    [qc],
+  );
   useEffect(() => {
     if (!activeAgentId) return;
-    return wsClient.subscribe(topics.matches(activeAgentId), () => {
-      // Layout-level subscribe keeps the WS warm; feature pages own real handlers.
-    });
-  }, [activeAgentId]);
+    return wsClient.subscribe(topics.matches(activeAgentId), onMatchFrame);
+  }, [activeAgentId, onMatchFrame]);
 
   if (!token) return null;
 

@@ -58,8 +58,10 @@ export function FeedPage() {
       { targetAgentId: card.agentId, action: "super_like" },
       {
         onSuccess: (res) => {
-          // A "Liked You" agent already liked you back — liking always matches.
-          if (card.superLikedYou) {
+          // 매치 성사 시 MatchModal 띄움.
+          // - res.matched: 백엔드가 카운터-스와이프 감지하고 새 match insert (정상 흐름)
+          // - card.superLikedYou: mock-only fallback. 상대가 이미 super liked한 상태 표시
+          if (res.matched || card.superLikedYou) {
             setMatch({
               matchId: res.matchId ?? `mt_${card.agentId}`,
               partnerName: card.displayName,
