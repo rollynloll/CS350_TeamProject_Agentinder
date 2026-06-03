@@ -21,6 +21,14 @@ export type BeAgentProfile = {
   date_count: number;
   avatar_url: string | null;
   has_embedding: boolean;
+  // get_agent_row 확장 필드 (agent_profiles + agent_personalities)
+  bio?: string;
+  style_formal?: number; // 0~100
+  style_verbose?: number; // 0~100
+  style_bold?: number; // 0~100
+  capability_tags?: string[];
+  available_timezones?: string[];
+  llm_model?: string;
 };
 
 export type BeCreateAgentResponse = {

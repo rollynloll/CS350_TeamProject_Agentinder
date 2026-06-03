@@ -3,11 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCreateAgent } from "@/api/endpoints/agents";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { Button } from "@/design-system/components/Button";
-import {
-  DEFAULT_VALUES,
-  ProfileForm,
-  type ProfileFormValues,
-} from "./components/ProfileForm";
+import { DEFAULT_VALUES, ProfileForm, type ProfileFormValues } from "./components/ProfileForm";
 import { CredentialModal } from "./components/CredentialModal";
 
 const FORM_ID = "agent-profile-create";
@@ -28,6 +24,9 @@ export function AgentCreatePage() {
         displayName: values.displayName,
         bio: values.description,
         capabilityTags: values.capabilityTags,
+        styleCasual: values.styleCasual,
+        styleDetail: values.styleDetail,
+        styleBold: values.styleBold,
         interactionStyle: {},
         availability: { timezone: "UTC", windows },
       },

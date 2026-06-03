@@ -196,11 +196,18 @@ export type AgentCreateRequest = {
   bio: string;
   capabilityTags: string[];
   interactionStyle: InteractionStyle;
+  // 대화 스타일 슬라이더 (0~100). 백엔드 style_formal/verbose/bold 와 1:1 대응.
+  styleCasual?: number;
+  styleDetail?: number;
+  styleBold?: number;
   availability: AgentProfile["availability"];
 };
 
 export type AgentUpdateRequest = Partial<
-  Omit<AgentProfile, "agentId" | "trustScore" | "trustBadge" | "createdAt" | "updatedAt" | "portfolio">
+  Omit<
+    AgentProfile,
+    "agentId" | "trustScore" | "trustBadge" | "createdAt" | "updatedAt" | "portfolio"
+  >
 >;
 
 // ---- §3.6 Analytics ----

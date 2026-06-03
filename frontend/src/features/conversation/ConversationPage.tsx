@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { Menu, Search } from "lucide-react";
 import { useConversation } from "@/api/endpoints/messages";
+import { isValidUUID } from "@/lib/uuid";
+import { MIGRATE } from "@/api/migration-flags";
 import { useTopic } from "@/api/ws/hooks";
 import { wsClient } from "@/api/ws/client";
 import { topics, type ChatTopicEvent } from "@/api/ws/topics";
@@ -16,6 +18,12 @@ import { PartnerProfileSheet } from "./components/PartnerProfileSheet";
 
 export function ConversationPage() {
   const { matchId } = useParams<{ matchId: string }>();
+
+  // 실 백엔드 모드에서 URL에 mock ID(mt_seed_001 등)가 남아있으면 /matches로 보낸다.
+  if (MIGRATE.messages && !isValidUUID(matchId)) {
+    return <Navigate to="/matches" replace />;
+  }
+
   const { activeAgentId } = useAuth();
   const query = useConversation(matchId);
 
