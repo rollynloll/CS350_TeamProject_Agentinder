@@ -3,14 +3,17 @@ S3: 비동기 매칭 & 데이트
 Guide: 시나리오 3 (3-1 ~ 3-9)
 
 Setup  Principal A·B 멱등 생성 + Agent A(AlphaBot)·B(BetaBot) 신규 생성
-3-1    GET  /v1/agents/{A}/feed            → BetaBot 포함 여부·compatibility 확인
+3-1    GET  /v1/agents/{A}/feed            → 피드 구조·정렬·필드 검증
+                                             BetaBot 존재는 GET /v1/agents/{B} 별도 확인
+                                             (공유 DB 누적으로 피드 limit 내 미보장)
 3-2    POST /v1/agents/{A}/swipe right     → swiped=true, match=null
 3-3    POST /v1/agents/{B}/swipe right     → swiped=true, match 생성
 3-4    POST /v1/matches/{M}/approve        → status=approved
-3-5    POST /v1/matches/{M}/dates          → date_id·type·is_noshow=false
+3-5    POST /v1/matches/{M}/dates          → date_id·type·is_noshow=false·started_at=null
 3-6    WS   join_date (A 먼저·B 이후)     → A: started=false, B: started=true
-3-7    WS   send_message (A)              → message_sent + response·message_id
-3-8    GET  /v1/matches/{M}/messages       → items 리스트 검증
+3-7    WS   send_message (A·B 각각)       → message_sent + response·message_id (총 4건)
+3-8    GET  /v1/matches/{M}/messages       → 대화 기록 4건 검증 + 로그 파일 저장
+                                             logs/conversation_{timestamp}_{run_id}.log
 3-9    POST /v1/dates/{D}/end             → outcome=completed
 
 Skip (API 미구현):
@@ -311,28 +314,40 @@ async def _ws_join_and_message(state: dict) -> dict:
                 await asyncio.wait_for(ws_b.recv(), timeout=5)
             )
 
-            # A: 메시지 전송 (3-7)
-            # B join 직후 서버가 DateStarted pub/sub 을 date.{DATE_ID} 구독자에게 push할 수 있음.
-            # recv() 루프에서 date_started 를 drain 하고 message_sent 를 찾는다.
-            await ws_a.send(json.dumps({
-                "topic": f"chat.{match_id}",
-                "event": "send_message",
-                "payload": {
-                    "match_id": str(match_id),
-                    "agent_id": str(agent_a_id),
-                    "content": "안녕하세요! 협업 방식에 대해 이야기해볼까요?",
-                },
-            }))
+            # A·B 교대로 메시지 전송 — 각 전송마다 유저 메시지 + LLM 응답 2건 생성
+            # _MSG_ROUNDS=5 → 총 10건 (limit과 일치)
+            _MSG_ROUNDS = 5
+            _CONV = [
+                (ws_a, agent_a_id, "안녕하세요! 협업 방식에 대해 이야기해볼까요?"),
+                (ws_b, agent_b_id, "네, 저는 코딩과 디자인 분야에서 협업을 선호합니다. 구체적으로 어떤 방식을 생각하고 계신가요?"),
+                (ws_a, agent_a_id, "코드 리뷰와 페어 프로그래밍을 주로 활용합니다. 어떤 툴을 쓰시나요?"),
+                (ws_b, agent_b_id, "Figma와 GitHub를 함께 씁니다. 스프린트 주기는 어떻게 운영하시나요?"),
+                (ws_a, agent_a_id, "2주 스프린트로 운영 중입니다. 회고는 매 스프린트 말에 진행해요."),
+            ]
 
-            for _ in range(5):
-                try:
-                    raw = json.loads(await asyncio.wait_for(ws_a.recv(), timeout=15))
-                    if raw.get("event") == "message_sent":
-                        results["message"] = raw
+            # B join 직후 서버가 DateStarted pub/sub을 push할 수 있으므로 첫 recv를 drain
+            for turn, (ws, agent_id, content) in enumerate(_CONV[:_MSG_ROUNDS]):
+                await ws.send(json.dumps({
+                    "topic": f"chat.{match_id}",
+                    "event": "send_message",
+                    "payload": {
+                        "match_id": str(match_id),
+                        "agent_id": str(agent_id),
+                        "content": content,
+                    },
+                }))
+                for _ in range(5):
+                    try:
+                        raw = json.loads(await asyncio.wait_for(ws.recv(), timeout=15))
+                        if raw.get("event") == "message_sent":
+                            # 첫 번째 A·B 응답은 3-7 어서션용으로 별도 보관
+                            if turn == 0:
+                                results["message_a"] = raw
+                            elif turn == 1:
+                                results["message_b"] = raw
+                            break
+                    except asyncio.TimeoutError:
                         break
-                    # date_started 등 pub/sub 이벤트는 드레인
-                except asyncio.TimeoutError:
-                    break
 
     return results
 
@@ -374,17 +389,20 @@ def test_3_6_ws_join_date(state: dict) -> bool:
 # ── 3-7 ──────────────────────────────────────────────────────────────────────
 
 def test_3_7_ws_send_message(state: dict) -> bool:
-    """WS send_message → message_sent: event·response·message_id"""
+    """WS send_message (A·B 각각) → message_sent: event·response·message_id"""
     if not HAS_WS:
         print("  SKIP  3-7 (websockets 미설치)")
         return True
     results = state.get("_ws", {})
-    msg = results.get("message")
-    if msg is None:
-        return _fail("3-7 message_sent 미수신 (LLM 타임아웃 또는 3-6 실패)")
-    ok = check_field("3-7 event=message_sent", msg, "event",      "message_sent")
-    ok &= check_not_none("3-7 message_id",      msg, "message_id")
-    ok &= check_not_none("3-7 response text",   msg, "response")
+    ok = True
+    for label, key in [("A", "message_a"), ("B", "message_b")]:
+        msg = results.get(key)
+        if msg is None:
+            ok = _fail(f"3-7 Agent{label} message_sent 미수신 (LLM 타임아웃 또는 3-6 실패)")
+            continue
+        ok &= check_field(f"3-7 Agent{label} event=message_sent", msg, "event",      "message_sent")
+        ok &= check_not_none(f"3-7 Agent{label} message_id",       msg, "message_id")
+        ok &= check_not_none(f"3-7 Agent{label} response text",    msg, "response")
     return ok
 
 
@@ -396,7 +414,7 @@ def test_3_8_message_history(state: dict) -> bool:
     if not match_id:
         return _fail("3-8 SKIP (no match_id)")
 
-    resp = api_get(f"/v1/matches/{match_id}/messages?limit=20", JWT_A)
+    resp = api_get(f"/v1/matches/{match_id}/messages?limit=10", JWT_A)
     ok = check_status("3-8 get messages", resp, 200)
     if not ok:
         return False
@@ -405,12 +423,14 @@ def test_3_8_message_history(state: dict) -> bool:
     items = data.get("items", [])
     ok &= check_truthy("3-8 items key exists", "items" in data)
 
-    # WS 메시지 전송이 성공했다면 유저 메시지 + LLM 응답 2개 이상
-    if HAS_WS and state.get("_ws", {}).get("message"):
-        if len(items) >= 2:
-            _ok(f"3-8 {len(items)} messages (user + LLM response)")
+    # A·B 각각 유저 메시지 + LLM 응답 → 총 4개 이상
+    ws = state.get("_ws", {})
+    if HAS_WS and (ws.get("message_a") or ws.get("message_b")):
+        # 5회 전송 × 2(유저+LLM) = 10건, limit=10이므로 전부 포함되어야 함
+        if len(items) == 10:
+            _ok("3-8 10 messages (5회 전송 × 유저+LLM)")
         else:
-            ok = _fail("3-8 messages < 2", f"got {len(items)}")
+            ok = _fail("3-8 messages != 10", f"got {len(items)}")
 
     # 대화 기록 로그 출력 + 파일 저장
     agent_a_id = state.get("agent_a_id", "")
