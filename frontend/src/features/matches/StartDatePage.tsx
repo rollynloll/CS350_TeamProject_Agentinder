@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useScheduleDate } from "@/api/endpoints/dates";
 import { Avatar } from "@/design-system/components/Avatar";
@@ -6,6 +6,7 @@ import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { TierBadge } from "@/design-system/components/TierBadge";
 import type { DateType, Tier } from "@/api/types";
 import { cn } from "@/lib/cn";
+import { nowLocalInput } from "@/lib/datetime";
 
 type StartState = {
   partnerName?: string;
@@ -34,6 +35,7 @@ export function StartDatePage() {
   const [type, setType] = useState<DateType>("coffee_chat");
   const [task, setTask] = useState("");
   const [time, setTime] = useState("");
+  const minTime = useMemo(() => nowLocalInput(), []);
 
   const start = () => {
     if (!matchId || !time || schedule.isPending) return;
@@ -119,8 +121,9 @@ export function StartDatePage() {
           <input
             type="datetime-local"
             value={time}
+            min={minTime}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full rounded-[12px] bg-bg shadow-inset px-3 py-3 text-body1 text-text focus:outline-none [color-scheme:dark]"
+            className="w-full rounded-[12px] bg-bg shadow-inset px-3 py-3 text-body1 text-text placeholder:text-text-subtle focus:outline-none"
           />
         </div>
 

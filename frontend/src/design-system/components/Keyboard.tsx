@@ -86,7 +86,7 @@ export const Keyboard = forwardRef<HTMLDivElement>(function Keyboard(_props, ref
   return (
     <div
       ref={ref}
-      className="absolute inset-x-0 bottom-0 z-50 bg-bg px-1.5 pt-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] select-none shadow-elevated"
+      className="shrink-0 z-50 bg-bg px-1.5 pt-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] select-none shadow-elevated"
     >
       {/* Row 1 */}
       <div className="grid grid-cols-10 gap-1 mb-1.5">

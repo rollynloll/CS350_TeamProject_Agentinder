@@ -34,6 +34,16 @@ export function MobileShell({
     setKbHeight(keyboard && kbRef.current ? kbRef.current.offsetHeight : 0);
   }, [keyboard]);
 
+  // 키보드가 펼쳐진 직후, 포커스된 필드를 시야 중앙으로 끌어올린다. 브라우저
+  // 기본 스크롤은 키보드가 자리잡기 전에 일어나 가려진 상태로 끝나기 쉽다.
+  useEffect(() => {
+    if (!keyboard || kbHeight === 0) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (active && isTextField(active)) {
+      active.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [keyboard, kbHeight]);
+
   useEffect(() => {
     const onFocusIn = (e: FocusEvent) => {
       if (isTextField(e.target)) setKeyboard(true);

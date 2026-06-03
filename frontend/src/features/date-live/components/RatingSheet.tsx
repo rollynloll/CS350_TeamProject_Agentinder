@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Star, X } from "lucide-react";
 import { Button } from "@/design-system/components/Button";
+import { useKeyboard } from "@/design-system/components/keyboard-context";
 import { cn } from "@/lib/cn";
 
 type Outcome = "successful" | "neutral" | "unsuccessful";
@@ -32,6 +33,7 @@ export function RatingSheet({
   const [outcome, setOutcome] = useState<Outcome>("neutral");
   const [feedback, setFeedback] = useState("");
   const [compatibility, setCompatibility] = useState(3);
+  const { height: kbHeight } = useKeyboard();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -43,7 +45,10 @@ export function RatingSheet({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Overlay className="absolute inset-0 bg-black/50 z-40" />
-      <Dialog.Content className="absolute bottom-0 inset-x-0 top-[59px] z-50 bg-bg rounded-t-3xl border-t border-border overflow-y-auto focus:outline-none">
+      <Dialog.Content
+        style={{ bottom: kbHeight }}
+        className="absolute inset-x-0 top-[59px] z-50 bg-bg rounded-t-3xl border-t border-border overflow-y-auto transition-[bottom] duration-150 focus:outline-none"
+      >
           <form onSubmit={handleSubmit} className="p-5 space-y-5">
             <div className="flex items-start justify-between gap-2">
               <div>

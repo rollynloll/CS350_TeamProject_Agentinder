@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Button } from "@/design-system/components/Button";
+import { useKeyboard } from "@/design-system/components/keyboard-context";
 import type { DateType } from "@/api/types";
 import { cn } from "@/lib/cn";
+import { nowLocalInput } from "@/lib/datetime";
 
 // SRS UC-0301 step 2: offer the date types. REQ-0301: only Coffee Chat is
 // supported in v1; Activity/Deep Dive are Phase 2.
@@ -26,6 +28,8 @@ export function ScheduleDateSheet({
 }) {
   const [type, setType] = useState<DateType>("coffee_chat");
   const [time, setTime] = useState("");
+  const { height: kbHeight } = useKeyboard();
+  const minTime = useMemo(() => nowLocalInput(), []);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -37,7 +41,10 @@ export function ScheduleDateSheet({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40 z-40 animate-in fade-in" />
-        <Dialog.Content className="fixed bottom-0 inset-x-0 z-50 bg-bg rounded-t-3xl border-t border-border max-h-[90dvh] overflow-y-auto md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[393px]">
+        <Dialog.Content
+          style={{ bottom: kbHeight }}
+          className="fixed inset-x-0 z-50 bg-bg rounded-t-3xl border-t border-border max-h-[90dvh] overflow-y-auto transition-[bottom] duration-150 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[393px]"
+        >
           <form onSubmit={handleSubmit} className="p-5 space-y-5">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -90,8 +97,9 @@ export function ScheduleDateSheet({
                 id="schedule-time"
                 type="datetime-local"
                 value={time}
+                min={minTime}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-body1 focus:outline-none focus:border-primary"
+                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-body1 text-text focus:outline-none focus:border-primary"
               />
             </div>
 
