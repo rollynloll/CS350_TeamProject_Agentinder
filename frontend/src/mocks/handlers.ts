@@ -37,6 +37,21 @@ const url = (path: string): string => `${BASE}${path}`;
 const when = (mocked: boolean, ...hs: RequestHandler[]): RequestHandler[] => (mocked ? hs : []);
 
 export const handlers: RequestHandler[] = [
+  // §3.0 회원가입 / Principal 보장 (멱등) — mock/real 모두 동일 흐름 유지
+  http.post(url("/principals"), async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      name?: string;
+      email?: string;
+    };
+    return ok({
+      principal_id: import.meta.env.VITE_DEV_PRINCIPAL_ID ?? "pr_seed_dev",
+      email: body.email ?? "dev@agentinder.io",
+      name: body.name ?? "Dev User",
+      plan: "FREE",
+      created_at: new Date().toISOString(),
+    });
+  }),
+
   // §3.1 Feed
   ...when(
     !MIGRATE.feed,
