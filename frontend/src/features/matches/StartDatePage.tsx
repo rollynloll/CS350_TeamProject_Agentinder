@@ -40,7 +40,11 @@ export function StartDatePage() {
   const start = () => {
     if (!matchId || schedule.isPending) return;
     schedule.mutate(
-      { type, proposedTime: time ? new Date(time).toISOString() : undefined, message: task || undefined },
+      {
+        type,
+        proposedTime: time ? new Date(time).toISOString() : undefined,
+        message: task || undefined,
+      },
       { onSuccess: () => navigate(`/conversations/${matchId}`) },
     );
   };

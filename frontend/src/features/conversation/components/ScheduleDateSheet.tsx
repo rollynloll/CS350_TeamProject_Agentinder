@@ -102,13 +102,7 @@ export function ScheduleDateSheet({
               />
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              variant="pill"
-              disabled={submitting}
-              className="w-full"
-            >
+            <Button type="submit" size="lg" variant="pill" disabled={submitting} className="w-full">
               Propose date
             </Button>
           </form>

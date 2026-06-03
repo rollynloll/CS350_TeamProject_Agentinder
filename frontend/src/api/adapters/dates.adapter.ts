@@ -39,7 +39,10 @@ export function mapLiveDate(be: BeDate): LiveDateResponse {
   };
 }
 
-export function mapScheduleRequest(req: ScheduleDateRequest): { type: string; scheduled_at?: string } {
+export function mapScheduleRequest(req: ScheduleDateRequest): {
+  type: string;
+  scheduled_at?: string;
+} {
   return { type: req.type, ...(req.proposedTime ? { scheduled_at: req.proposedTime } : {}) };
 }
 

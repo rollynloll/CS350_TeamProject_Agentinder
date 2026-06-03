@@ -132,18 +132,14 @@ def _reconstruct_agent_from_row(row: asyncpg.Record) -> Agent:
     return agent
 
 
-async def get_principal(request: Request) -> Principal:
-    ctx: AuthContext = request.state.auth
-    pid = ctx.principal_id
-    assert pid is not None
+async def get_principal_by_id(principal_id: UUID) -> Principal:
+    """principal_id로 Principal을 반환한다. 캐시 miss 시 DB에서 재구성."""
+    if principal_id in _principal_cache:
+        return _principal_cache[principal_id]
 
-    if pid in _principal_cache:
-        return _principal_cache[pid]
-
-    # DB에서 Principal 재구성 (결정 #5)
-    row = await db.get_principal_row(pid)
+    row = await db.get_principal_row(principal_id)
     if row is None:
-        raise KeyError(f"Principal을 찾을 수 없습니다: {pid}")
+        raise KeyError(f"Principal을 찾을 수 없습니다: {principal_id}")
 
     profile = PrincipalProfile(
         email=row["email"],
@@ -153,22 +149,28 @@ async def get_principal(request: Request) -> Principal:
     assert agent_service is not None
     assert score_manager is not None
     principal = Principal(
-        principal_id=pid,
+        principal_id=principal_id,
         profile=profile,
         agent_service=agent_service,
         score_manager=score_manager,
         created_at=row["created_at"],
     )
 
-    # DB에서 에이전트 복원 — agent_service._agents도 동시에 채움 (C-1 fix)
-    agent_rows = await db.get_principal_agents_full(pid)
+    agent_rows = await db.get_principal_agents_full(principal_id)
     for agent_row in agent_rows:
         agent = _reconstruct_agent_from_row(agent_row)
         principal._agents[agent.agent_id] = agent
         agent_service._agents[agent.agent_id] = agent
-        agent_service._principal_agents.setdefault(pid, [])
-        if agent.agent_id not in agent_service._principal_agents[pid]:
-            agent_service._principal_agents[pid].append(agent.agent_id)
+        agent_service._principal_agents.setdefault(principal_id, [])
+        if agent.agent_id not in agent_service._principal_agents[principal_id]:
+            agent_service._principal_agents[principal_id].append(agent.agent_id)
 
-    _principal_cache[pid] = principal
+    _principal_cache[principal_id] = principal
     return principal
+
+
+async def get_principal(request: Request) -> Principal:
+    ctx: AuthContext = request.state.auth
+    pid = ctx.principal_id
+    assert pid is not None
+    return await get_principal_by_id(pid)
