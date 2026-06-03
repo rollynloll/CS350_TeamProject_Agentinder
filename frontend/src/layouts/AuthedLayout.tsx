@@ -10,6 +10,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
 import { ensurePrincipal } from "@/api/endpoints/principals";
+import { useMyAgents } from "@/api/endpoints/agents";
 import { wsClient } from "@/api/ws/client";
 import { useWsStatus } from "@/api/ws/hooks";
 import { cn } from "@/lib/cn";
@@ -32,6 +33,20 @@ export function AuthedLayout() {
   const navigate = useNavigate();
   const { token, activeAgentId } = useAuth();
   const wsStatus = useWsStatus();
+
+  // 로그인 후 에이전트 목록을 가져와 activeAgentId 를 자동 선택한다.
+  // React Query 캐시를 공유하므로 MyAgentsPage 등 다른 곳에서도 중복 요청 없이 재사용된다.
+  const { data: agentsData, isSuccess: agentsLoaded } = useMyAgents();
+  useEffect(() => {
+    if (!agentsLoaded) return;
+    const agents = agentsData?.agents ?? [];
+    if (agents.length === 0) return;
+    const { activeAgentId: cur, setActiveAgent } = useAuth.getState();
+    // 현재 선택된 에이전트가 없거나 목록에서 사라진 경우 첫 번째 에이전트로 설정한다.
+    if (!cur || !agents.some((a) => a.agentId === cur)) {
+      setActiveAgent(agents[0].agentId);
+    }
+  }, [agentsLoaded, agentsData]);
 
   useEffect(() => {
     if (!token) {

@@ -9,3 +9,9 @@ export function uuid(): string {
     return v.toString(16);
   });
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidUUID(id: string | null | undefined): boolean {
+  return Boolean(id) && UUID_RE.test(id!);
+}

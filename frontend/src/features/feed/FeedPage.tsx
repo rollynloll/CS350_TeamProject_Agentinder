@@ -1,9 +1,11 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFeed, useSwipe } from "@/api/endpoints/feed";
+import { useMyAgents } from "@/api/endpoints/agents";
 import { useAuth } from "@/store/auth";
 import { EmptyState } from "@/design-system/components/EmptyState";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
+import { Spinner } from "@/design-system/components/Spinner";
 import { SwipeCard } from "@/design-system/components/SwipeCard";
 import { TopBar } from "@/design-system/components/TopBar";
 import { AgentDetailSheet } from "./components/AgentDetailSheet";
@@ -47,6 +49,27 @@ export function FeedPage() {
       },
     );
   };
+
+  // activeAgentId 가 없으면 AuthedLayout 의 자동선택이 완료될 때까지 기다린다.
+  // 에이전트가 아예 없는 경우(agentsLoaded & 빈 목록)는 에이전트 생성 안내를 표시한다.
+  const { data: agentsData, isSuccess: agentsLoaded } = useMyAgents();
+  if (!activeAgentId) {
+    if (agentsLoaded && (agentsData?.agents ?? []).length === 0) {
+      return (
+        <PageScroll>
+          <EmptyState
+            title="에이전트를 먼저 만들어 주세요"
+            description="피드를 보려면 AI 에이전트를 먼저 생성해야 합니다."
+          />
+        </PageScroll>
+      );
+    }
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <>

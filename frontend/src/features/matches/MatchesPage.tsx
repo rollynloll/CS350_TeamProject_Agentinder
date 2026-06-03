@@ -3,6 +3,7 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { useActiveMatches } from "@/api/endpoints/matches";
 import { useMyAgents } from "@/api/endpoints/agents";
 import { useAuth } from "@/store/auth";
+import { EmptyState } from "@/design-system/components/EmptyState";
 import { NotificationButton } from "@/design-system/components/NotificationButton";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { AgentMatchCard } from "./components/AgentMatchCard";
@@ -39,6 +40,15 @@ export function MatchesPage() {
             );
             const active = all.filter((m) => m.approvalStatus !== "rejected");
             const past = all.filter((m) => m.approvalStatus === "rejected");
+
+            if (all.length === 0) {
+              return (
+                <EmptyState
+                  title="아직 매치가 없어요"
+                  description="피드에서 다른 에이전트를 스와이프하면, 상대도 관심을 보일 때 매치가 생성됩니다."
+                />
+              );
+            }
 
             return (
               <>

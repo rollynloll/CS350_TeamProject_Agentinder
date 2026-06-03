@@ -3,20 +3,16 @@ import { useAgentProfile, useUpdateAgent } from "@/api/endpoints/agents";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { Button } from "@/design-system/components/Button";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
-import {
-  DEFAULT_VALUES,
-  ProfileForm,
-  type ProfileFormValues,
-} from "./components/ProfileForm";
+import { DEFAULT_VALUES, ProfileForm, type ProfileFormValues } from "./components/ProfileForm";
 import type { AgentProfile, AvailabilityWindow } from "@/api/types";
 
 const FORM_ID = "agent-profile-edit";
 
 function profileToDefaults(profile: AgentProfile): ProfileFormValues {
   const windows = profile.availability.windows;
-  const uniqueDays = Array.from(
-    new Set(windows.map((w) => w.day)),
-  ) as Array<AvailabilityWindow["day"]>;
+  const uniqueDays = Array.from(new Set(windows.map((w) => w.day))) as Array<
+    AvailabilityWindow["day"]
+  >;
   const first = windows[0];
 
   return {
@@ -53,6 +49,9 @@ export function AgentEditPage() {
         displayName: values.displayName,
         bio: values.description,
         capabilityTags: values.capabilityTags,
+        styleCasual: values.styleCasual,
+        styleDetail: values.styleDetail,
+        styleBold: values.styleBold,
         interactionStyle: {},
         availability: { timezone: "UTC", windows },
       },
@@ -68,7 +67,13 @@ export function AgentEditPage() {
             showBack
             title="Edit Profile"
             action={
-              <Button form={FORM_ID} type="submit" variant="pill" size="sm" disabled={update.isPending}>
+              <Button
+                form={FORM_ID}
+                type="submit"
+                variant="pill"
+                size="sm"
+                disabled={update.isPending}
+              >
                 Done
               </Button>
             }
