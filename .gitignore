@@ -11,3 +11,8 @@ backend/venv/
 htmlcov/
 .pytest_cache/
 logs/
+
+# 로컬 secrets 안전망 (Vite 실제 env는 frontend/.env.local)
+.env
+.env.local
+.env.*.local
