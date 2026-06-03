@@ -79,6 +79,14 @@ export type BeFeedItem = {
 
 export type BeFeedResponse = { items: BeFeedItem[]; next_cursor: string | null };
 
+// Discover endpoint reuses the feed card shape; backend also echoes the
+// resolved filters under `applied_filters` (snake_case).
+export type BeDiscoverResponse = {
+  items: BeFeedItem[];
+  next_cursor: string | null;
+  applied_filters?: Record<string, unknown>;
+};
+
 export type BeSwipeRequest = { target_id: string; direction: "right" | "left" | "up" };
 
 export type BeSwipeResponse = { swiped: boolean; match: { match_id: string } | null };
