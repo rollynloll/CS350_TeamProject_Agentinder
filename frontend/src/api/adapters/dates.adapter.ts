@@ -39,8 +39,11 @@ export function mapLiveDate(be: BeDate): LiveDateResponse {
   };
 }
 
-export function mapScheduleRequest(req: ScheduleDateRequest): { type: string; scheduled_at: string } {
-  return { type: req.type, scheduled_at: req.proposedTime };
+export function mapScheduleRequest(req: ScheduleDateRequest): {
+  type: string;
+  scheduled_at?: string;
+} {
+  return { type: req.type, ...(req.proposedTime ? { scheduled_at: req.proposedTime } : {}) };
 }
 
 export function mapScheduleResponse(be: BeDate): ScheduleDateResponse {
@@ -48,7 +51,7 @@ export function mapScheduleResponse(be: BeDate): ScheduleDateResponse {
     dateId: be.date_id,
     status: liveStatus(be),
     type: normalizeDateType(be.type),
-    proposedTime: be.scheduled_at ?? be.created_at,
+    proposedTime: be.scheduled_at ?? null,
   };
 }
 

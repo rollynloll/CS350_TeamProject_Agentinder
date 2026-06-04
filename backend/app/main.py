@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import db
 from .auth.auth_middleware import AuthMiddleware
 from .auth.error_handler_middleware import ErrorHandlerMiddleware
+from .config import settings
 from .deps import init_singletons
 from .handlers import (
     agent_profile_handler,
@@ -23,6 +25,9 @@ from .transport import ws_transport
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # pydantic-settings는 os.environ을 채우지 않으므로 모델 레이어가 읽을 수 있도록 주입한다.
+    if settings.openai_api_key:
+        os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
     await db.init_pool()
     init_singletons()
     yield

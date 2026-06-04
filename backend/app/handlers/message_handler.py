@@ -61,13 +61,19 @@ async def handle_send_message(
     if sender_agent is None:
         raise KeyError(f"에이전트 인스턴스 없음: {sender_agent_id}")
 
+    # 상대방 에이전트가 응답을 생성한다.
+    counterpart_agent_id = (
+        match_row["agent_b_id"] if match_row["agent_a_id"] == sender_agent_id
+        else match_row["agent_a_id"]
+    )
+
     response_text = sender_agent.sendMessage(match_id, content)
-    resp_msg = await db.insert_message(match_id, sender_agent_id, response_text)
+    resp_msg = await db.insert_message(match_id, counterpart_agent_id, response_text)
 
     bus.publish(MessageCreated(
         message_id=resp_msg["message_id"],
         match_id=match_id,
-        sender_agent_id=sender_agent_id,
+        sender_agent_id=counterpart_agent_id,
         content=response_text,
     ))
 

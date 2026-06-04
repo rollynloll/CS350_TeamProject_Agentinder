@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from ..deps import _principal_cache, get_event_bus, get_ws_gateway
+from ..deps import get_event_bus, get_principal_by_id, get_ws_gateway
 from ..handlers import date_handler, message_handler
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,10 @@ async def _dispatch(ws: WebSocket, frame: dict, principal_id: UUID) -> None:
         await ws.send_text(json.dumps({"event": "unsubscribed", "topic": topic}))
         return
 
-    principal = _principal_cache.get(principal_id)
-    if principal is None:
-        await ws.send_text(json.dumps({"error": "Principal 세션 없음. REST 로그인 후 사용하세요."}))
+    try:
+        principal = await get_principal_by_id(principal_id)
+    except Exception:
+        await ws.send_text(json.dumps({"error": "Principal 재구성 실패. 다시 로그인해 주세요."}))
         return
 
     if event == "send_message":

@@ -23,7 +23,7 @@ export function ScheduleDateSheet({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { type: DateType; proposedTime: string }) => void;
+  onSubmit: (data: { type: DateType; proposedTime?: string }) => void;
   submitting?: boolean;
 }) {
   const [type, setType] = useState<DateType>("coffee_chat");
@@ -33,8 +33,7 @@ export function ScheduleDateSheet({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!time) return;
-    onSubmit({ type, proposedTime: time });
+    onSubmit({ type, proposedTime: time || undefined });
   };
 
   return (
@@ -103,13 +102,7 @@ export function ScheduleDateSheet({
               />
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              variant="pill"
-              disabled={!time || submitting}
-              className="w-full"
-            >
+            <Button type="submit" size="lg" variant="pill" disabled={submitting} className="w-full">
               Propose date
             </Button>
           </form>
