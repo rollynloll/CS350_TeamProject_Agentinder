@@ -8,9 +8,9 @@ import {
   conversation,
   liveDate,
   matchDates,
-  relationships,
+  relationshipsFor,
 } from "./fixtures/matches";
-import { analytics, settings } from "./fixtures/analytics";
+import { analyticsFor, settings } from "./fixtures/analytics";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "https://api.agentinder.io/v1";
 
@@ -146,7 +146,9 @@ export const handlers: RequestHandler[] = [
   // §3.6 Analytics
   ...when(
     !MIGRATE.analytics,
-    http.get(url("/agents/:agentId/analytics"), () => ok(analytics)),
+    http.get(url("/agents/:agentId/analytics"), ({ params }) =>
+      ok(analyticsFor(String(params.agentId))),
+    ),
   ),
 
   // §3.7 Active Matches
@@ -158,7 +160,9 @@ export const handlers: RequestHandler[] = [
   // §3.8 Relationships (tiers mock-only; match date history has a backend route)
   ...when(
     !MIGRATE.relationships,
-    http.get(url("/agents/:agentId/relationships"), () => ok(relationships)),
+    http.get(url("/agents/:agentId/relationships"), ({ params }) =>
+      ok(relationshipsFor(String(params.agentId))),
+    ),
   ),
   ...when(
     !MIGRATE.dateHistory,
@@ -196,10 +200,23 @@ export const handlers: RequestHandler[] = [
     http.patch(url("/dates/:dateId"), () => ok({ ...liveDate, status: "completed" as const })),
   ),
 
-  // §3.10 Conversation
+  // §3.10 Conversation — reflect the opened match's type/task so a manual date
+  // shows the composer and an auto date does not.
   ...when(
     !MIGRATE.messages,
-    http.get(url("/matches/:matchId/messages"), () => ok(conversation)),
+    http.get(url("/matches/:matchId/messages"), ({ params }) => {
+      const match = activeMatches.sections
+        .flatMap((s) => s.matches)
+        .find((m) => m.matchId === params.matchId);
+      return ok({
+        ...conversation,
+        matchInfo: {
+          ...conversation.matchInfo,
+          matchType: match?.matchType ?? conversation.matchInfo.matchType,
+          task: match?.task ?? conversation.matchInfo.task,
+        },
+      });
+    }),
   ),
 
   // §3.11 Settings (mock-only)

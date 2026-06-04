@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Star } from "lucide-react";
 import { Avatar } from "@/design-system/components/Avatar";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
@@ -15,7 +15,12 @@ type ResultState = {
   partnerAvatarUrl?: string;
   tier?: Tier;
   myAvatarUrl?: string;
+  task?: string;
 };
+
+// Fallback task when the caller didn't pass one (mock-driven screens).
+const DEFAULT_TASK =
+  "Coordinate a weekly sync schedule between two teams across timezones, resolving conflicts and finalizing the plan.";
 
 const ISSUES = ["Hallucination", "Latency", "Unresponsive", "Unauthorized Behavior"] as const;
 
@@ -25,9 +30,9 @@ const ISSUES = ["Hallucination", "Latency", "Unresponsive", "Unauthorized Behavi
  * Compatibility slider, Comment, and the Issues checklist with a Save action.
  */
 export function DateResultPage() {
-  const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const s = (useLocation().state as ResultState | null) ?? {};
+  const task = s.task?.trim() ? s.task : DEFAULT_TASK;
 
   const [rating, setRating] = useState(0);
   const [compat, setCompat] = useState(50);
@@ -44,7 +49,9 @@ export function DateResultPage() {
       return next;
     });
 
-  const save = () => {
+  // Done saves the rating (when a real date is in context) then returns to the
+  // matches list. Unmatch just leaves without rating.
+  const done = () => {
     if (s.dateId && rating > 0) {
       endDate.mutate(
         {
@@ -53,28 +60,17 @@ export function DateResultPage() {
           compatibility: compat,
           ratedAgentId: s.partnerAgentId,
         },
-        { onSettled: () => navigate(`/matches/${matchId}/history`, { state: s }) },
+        { onSettled: () => navigate("/matches") },
       );
     } else {
-      navigate(`/matches/${matchId}/history`, { state: s });
+      navigate("/matches");
     }
   };
+  const unmatch = () => navigate("/matches");
 
   return (
     <>
-      <MobileHeader
-        showBack
-        title="Date Result"
-        action={
-          <button
-            type="button"
-            onClick={save}
-            className="rounded-[8px] bg-primary-light px-3 py-1 text-body2 font-semibold text-text"
-          >
-            Save
-          </button>
-        }
-      />
+      <MobileHeader showBack title="Date Result" />
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-2 pb-6 space-y-5">
         {/* Match cardsmall */}
         <div className="relative">
@@ -110,10 +106,11 @@ export function DateResultPage() {
 
         {/* Date Summary */}
         <Section title="Date Summary">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="rounded-full bg-bg shadow-inset px-3 py-1 text-body2 font-semibold text-text">
-              Coffee Chat
-            </span>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-body2 leading-[1.4] text-text">
+              <span className="text-text-muted">Task: </span>
+              {task}
+            </p>
             <span className="text-body2 text-text-muted">Mar 12, 2:10 PM – 3:16 PM</span>
           </div>
         </Section>
@@ -205,6 +202,24 @@ export function DateResultPage() {
             })}
           </div>
         </Section>
+
+        {/* Bottom actions — colors + radius from design tokens. */}
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={unmatch}
+            className="flex-1 rounded-md bg-danger py-3 text-body1 font-bold text-white"
+          >
+            Unmatch
+          </button>
+          <button
+            type="button"
+            onClick={done}
+            className="flex-1 rounded-md bg-primary py-3 text-body1 font-bold text-primary-fg"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </>
   );

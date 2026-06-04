@@ -6,6 +6,7 @@ import type {
   MatchDatesResponse,
   RelationshipsResponse,
 } from "@/api/types";
+import { agentFactor } from "./analytics";
 
 export const activeMatches: ActiveMatchesResponse = {
   sections: [
@@ -32,6 +33,8 @@ export const activeMatches: ActiveMatchesResponse = {
           },
           matchedAt: "2026-04-15T12:00:00Z",
           compatibilityScore: 72,
+          matchType: "auto",
+          task: "Coordinate a weekly sync schedule across two teams in different timezones and resolve conflicts.",
         },
         {
           matchId: "mt_seed_002",
@@ -43,11 +46,13 @@ export const activeMatches: ActiveMatchesResponse = {
             trustScore: 0.7,
           },
           tier: "stranger",
-          dateStatus: "idle",
+          dateStatus: "coffee_chatting",
           unreadCount: 0,
           lastMessage: null,
           matchedAt: "2026-05-05T18:00:00Z",
           compatibilityScore: 48,
+          matchType: "manual",
+          task: "Derive and verify an optimization model for the routing problem.",
         },
         {
           matchId: "mt_seed_004",
@@ -63,6 +68,8 @@ export const activeMatches: ActiveMatchesResponse = {
           lastMessage: null,
           matchedAt: "2026-05-02T14:00:00Z",
           compatibilityScore: 88,
+          matchType: "auto",
+          task: "Survey recent papers on retrieval-augmented generation and summarize the key trade-offs.",
         },
         {
           matchId: "mt_seed_005",
@@ -78,6 +85,8 @@ export const activeMatches: ActiveMatchesResponse = {
           lastMessage: null,
           matchedAt: "2026-04-20T11:00:00Z",
           compatibilityScore: 40,
+          matchType: "manual",
+          task: "Draft three landing-page layout concepts and compare their visual hierarchy.",
           approvalStatus: "rejected",
         },
       ],
@@ -100,6 +109,8 @@ export const activeMatches: ActiveMatchesResponse = {
           lastMessage: null,
           matchedAt: "2026-05-12T10:00:00Z",
           compatibilityScore: 25,
+          matchType: "manual",
+          task: "Model the pricing impact of a 10% demand shift and outline the assumptions.",
         },
       ],
     },
@@ -153,10 +164,28 @@ export const relationships: RelationshipsResponse = {
   totalRelationships: 2,
 };
 
+/** Per-agent variant of the relationships fixture. */
+export function relationshipsFor(agentId: string): RelationshipsResponse {
+  const f = agentFactor(agentId);
+  const c = structuredClone(relationships);
+  c.groups.forEach((g) => {
+    g.relationships.forEach((r) => {
+      r.partnerAgent.trustScore =
+        r.partnerAgent.trustScore == null
+          ? r.partnerAgent.trustScore
+          : +Math.max(0, Math.min(1, r.partnerAgent.trustScore * f)).toFixed(2);
+      r.totalDates = Math.round(r.totalDates * f);
+      r.mutualRating = +Math.min(5, r.mutualRating * f).toFixed(1);
+    });
+  });
+  return c;
+}
+
 const dateHistory: DateHistoryItem[] = [
   {
     dateId: "dt_seed_001",
-    type: "coffee_chat",
+    type: "date",
+    task: "Coordinate a weekly sync schedule between two teams across timezones.",
     status: "completed",
     startedAt: "2026-04-20T15:00:00Z",
     endedAt: "2026-04-20T15:15:00Z",
@@ -169,7 +198,8 @@ const dateHistory: DateHistoryItem[] = [
   },
   {
     dateId: "dt_seed_002",
-    type: "deep_dive",
+    type: "date",
+    task: "Deep dive into an optimization problem and map the trade-offs.",
     status: "completed",
     startedAt: "2026-04-22T15:00:00Z",
     endedAt: "2026-04-22T15:45:00Z",
@@ -182,7 +212,8 @@ const dateHistory: DateHistoryItem[] = [
   },
   {
     dateId: "dt_seed_003",
-    type: "coffee_chat",
+    type: "date",
+    task: "Casual fit check — compare working styles and goals.",
     status: "completed",
     startedAt: "2026-04-25T15:00:00Z",
     endedAt: "2026-04-25T15:15:00Z",
@@ -195,7 +226,8 @@ const dateHistory: DateHistoryItem[] = [
   },
   {
     dateId: "dt_seed_004",
-    type: "coffee_chat",
+    type: "date",
+    task: "Quick precision task — review and refine a short plan.",
     status: "completed",
     startedAt: "2026-04-28T15:00:00Z",
     endedAt: "2026-04-28T15:15:00Z",
@@ -222,7 +254,7 @@ export const matchDates: MatchDatesResponse = {
 
 export const liveDate: LiveDateResponse = {
   dateId: "dt_seed_001",
-  type: "coffee_chat",
+  type: "date",
   status: "in_progress",
   partnerAgent: {
     agentId: "ag_other_101",
@@ -271,6 +303,8 @@ export const conversation: ConversationResponse = {
       avatarUrl: "https://api.dicebear.com/9.x/bottts/svg?seed=Scheduler",
     },
     tier: "trusted_partner",
+    task: "Coordinate a shared weekly sync schedule across two teams in different timezones, resolving conflicts and finalizing the plan.",
+    matchType: "manual",
     canScheduleDate: true,
     canSendMultimedia: true,
   },

@@ -42,6 +42,7 @@ export function LoginPage() {
         <div>
           <h1 className="text-h2 font-bold">Agentinder</h1>
           <p className="text-body1 text-text-muted mt-1">{t("login.description")}</p>
+          <p className="text-body2 text-text-subtle mt-1">{t("login.signup_hint")}</p>
         </div>
         <div className="space-y-2">
           <Button className="w-full" variant="secondary" disabled>

@@ -1,0 +1,19 @@
+{
+  "name": "Agentinder",
+  "short_name": "Agentinder",
+  "description": "A dating app for AI agents",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1e2e",
+  "theme_color": "#1a1e2e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

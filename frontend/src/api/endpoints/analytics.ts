@@ -31,16 +31,13 @@ function mapBeAnalytics(be: BeAnalytics): AnalyticsResponse {
       totalDates: be.dateStats.totalDates,
       successRate: be.dateStats.successRate,
       byType: {
-        coffee_chat: {
-          count: be.dateStats.byType.coffee_chat?.count ?? 0,
-          successRate: be.dateStats.successRate,
-        },
-        deep_dive: {
-          count: be.dateStats.byType.deep_dive?.count ?? 0,
-          successRate: be.dateStats.successRate,
-        },
-        activity_date: {
-          count: be.dateStats.byType.activity_date?.count ?? 0,
+        // DateType is unified to a single "date" kind; sum the backend's
+        // legacy per-type counts into it.
+        date: {
+          count:
+            (be.dateStats.byType.coffee_chat?.count ?? 0) +
+            (be.dateStats.byType.deep_dive?.count ?? 0) +
+            (be.dateStats.byType.activity_date?.count ?? 0),
           successRate: be.dateStats.successRate,
         },
       },

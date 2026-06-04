@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, ImagePlus } from "lucide-react";
 import { useCreateAgent } from "@/api/endpoints/agents";
 import { useSettingsStore } from "@/store/settings";
+import { ALL_CAPABILITY_TAGS } from "./ProfileForm";
+import { cn } from "@/lib/cn";
+
+const MAX_TAGS = 10;
 
 /**
  * Empty "edit profile" form rendered INLINE in the Profile tab (not an overlay)
@@ -11,22 +15,37 @@ import { useSettingsStore } from "@/store/settings";
 export function NewAgentForm({ onClose }: { onClose: () => void }) {
   const create = useCreateAgent();
   const apiKeys = useSettingsStore((s) => s.apiKeys);
-  const keyNames = apiKeys.map((k) => k.name);
+  const [localKeys, setLocalKeys] = useState<string[]>([]);
+  const keyNames = [...apiKeys.map((k) => k.name), ...localKeys];
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [adding, setAdding] = useState("");
   const [keyName, setKeyName] = useState("");
+  const [addKeyOpen, setAddKeyOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeySecret, setNewKeySecret] = useState("");
   const [casual, setCasual] = useState(50);
   const [detail, setDetail] = useState(50);
   const [bold, setBold] = useState(50);
   const [autoMatch, setAutoMatch] = useState(false);
   const [task, setTask] = useState("");
 
-  const addTag = () => {
-    const v = adding.trim();
-    if (v && !tags.includes(v)) setTags([...tags, v]);
-    setAdding("");
+  const toggleTag = (tag: string) => {
+    setTags((prev) => {
+      if (prev.includes(tag)) return prev.filter((t) => t !== tag);
+      if (prev.length >= MAX_TAGS) return prev;
+      return [...prev, tag];
+    });
+  };
+
+  const addKey = () => {
+    const nm = newKeyName.trim();
+    if (!nm || !newKeySecret.trim()) return;
+    if (!keyNames.includes(nm)) setLocalKeys((prev) => [...prev, nm]);
+    setKeyName(nm);
+    setNewKeyName("");
+    setNewKeySecret("");
+    setAddKeyOpen(false);
   };
 
   const submit = () => {
@@ -45,21 +64,17 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
 
   return (
         <div className="rounded-[24px] bg-bg shadow-float p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-h3 font-semibold text-text">New profile</h2>
+          <h2 className="text-h3 font-semibold text-text">New profile</h2>
+
+          {/* Avatar placeholder — tap the edit icon to set an image */}
+          <div className="relative h-[200px] w-full rounded-[24px] bg-surface-2 grid place-items-center text-text-subtle">
             <button
               type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="grid place-items-center w-8 h-8 rounded-full bg-surface-2 text-text-muted"
+              aria-label="Edit avatar image"
+              className="grid place-items-center w-14 h-14 rounded-full bg-bg shadow-float text-text-muted active:scale-95 transition-transform"
             >
-              <X className="w-5 h-5" />
+              <ImagePlus className="w-6 h-6" strokeWidth={1.75} />
             </button>
-          </div>
-
-          {/* Avatar placeholder */}
-          <div className="h-[200px] w-full rounded-[24px] bg-surface-2 grid place-items-center text-text-subtle text-body2">
-            Avatar
           </div>
 
           <input
@@ -77,38 +92,36 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
             className="w-full resize-none rounded-[12px] bg-bg shadow-inset px-3 py-2 text-body2 leading-[1.4] text-text placeholder:text-text-subtle focus:outline-none"
           />
 
-          {/* Capability tags */}
-          <p className="text-caption leading-[1.4] text-text-muted">Capability Tag</p>
+          {/* Capability tags — pick from the system-defined list, up to MAX_TAGS. */}
+          <div className="flex items-center justify-between">
+            <p className="text-caption leading-[1.4] text-text-muted">Capability Tag</p>
+            <span className="text-caption text-text-subtle tabular-nums">
+              {tags.length}/{MAX_TAGS}
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-1">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-[8px] bg-tag pl-2 pr-1 py-1 text-caption font-semibold text-text-muted"
-              >
-                {tag}
+            {ALL_CAPABILITY_TAGS.map((tag) => {
+              const selected = tags.includes(tag);
+              const disabled = !selected && tags.length >= MAX_TAGS;
+              return (
                 <button
+                  key={tag}
                   type="button"
-                  onClick={() => setTags(tags.filter((x) => x !== tag))}
-                  aria-label={`Remove ${tag}`}
-                  className="grid place-items-center hover:text-danger"
+                  onClick={() => toggleTag(tag)}
+                  disabled={disabled}
+                  aria-pressed={selected}
+                  className={cn(
+                    "rounded-[8px] px-2 py-1 text-caption font-semibold transition-colors",
+                    selected
+                      ? "bg-primary text-primary-fg"
+                      : "bg-tag text-text-muted hover:text-text",
+                    disabled && "opacity-40 cursor-not-allowed",
+                  )}
                 >
-                  <X className="w-3 h-3" strokeWidth={2.5} />
+                  {tag}
                 </button>
-              </span>
-            ))}
-            <input
-              value={adding}
-              onChange={(e) => setAdding(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTag();
-                }
-              }}
-              onBlur={addTag}
-              placeholder="+ add"
-              className="w-[64px] rounded-[8px] bg-bg shadow-inset px-2 py-1 text-caption text-text placeholder:text-text-subtle focus:outline-none"
-            />
+              );
+            })}
           </div>
 
           {/* Interaction Style */}
@@ -140,7 +153,13 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
             <div className="relative">
               <select
                 value={keyName}
-                onChange={(e) => setKeyName(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value === "__add__") {
+                    setAddKeyOpen(true);
+                    return;
+                  }
+                  setKeyName(e.target.value);
+                }}
                 className="w-full appearance-none rounded-[12px] bg-bg shadow-inset px-3 py-2 pr-9 text-body2 text-text focus:outline-none"
               >
                 <option value="">Select API key</option>
@@ -149,9 +168,46 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
                     {nm}
                   </option>
                 ))}
+                <option value="__add__">+ Add key</option>
               </select>
               <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             </div>
+            {addKeyOpen ? (
+              <div className="flex flex-col gap-2">
+                <input
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="Key name (e.g. GPT-agent)"
+                  className="w-full rounded-[8px] bg-bg shadow-inset px-3 py-2 text-body2 text-text placeholder:text-text-subtle focus:outline-none"
+                />
+                <input
+                  value={newKeySecret}
+                  onChange={(e) => setNewKeySecret(e.target.value)}
+                  placeholder="API key (e.g. sk-...)"
+                  className="w-full rounded-[8px] bg-bg shadow-inset px-3 py-2 text-body2 text-text placeholder:text-text-subtle focus:outline-none"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddKeyOpen(false);
+                      setNewKeyName("");
+                      setNewKeySecret("");
+                    }}
+                    className="rounded-[8px] bg-bg shadow-inset px-3 py-1 text-body2 font-semibold text-text-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addKey}
+                    className="rounded-[8px] bg-primary-light px-3 py-1 text-body2 font-semibold text-text"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <button
@@ -160,7 +216,7 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
             disabled={!name.trim() || create.isPending}
             className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
           >
-            Create
+            Add profile
           </button>
         </div>
   );

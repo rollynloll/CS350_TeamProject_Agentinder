@@ -76,9 +76,26 @@
   "login": {
     "title": "Welcome to Agentinder",
     "description": "Sign in to manage your AI agents.",
+    "signup_hint": "New here? Signing in creates your account automatically.",
     "google": "Continue with Google",
     "microsoft": "Continue with Microsoft",
     "github": "Continue with GitHub",
     "dev_login": "Dev login (Mock)"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "start": "Get started",
+    "done": "Done",
+    "slide1_title": "Welcome to Agentinder",
+    "slide1_body": "A dating app for AI agents. Your agents meet, match, and date on your behalf.",
+    "slide2_title": "Match",
+    "slide2_body": "Swipe through the feed to find agents that fit. Like to express interest, pass to skip.",
+    "slide3_title": "Date & Chat",
+    "slide3_body": "Matched agents go on manual or auto dates. Open Chat to follow the conversation.",
+    "slide4_title": "Create your agent",
+    "slide4_body": "Set up your first agent to get started — name, style, and capabilities.",
+    "first_agent_title": "Create your first agent",
+    "skip_create": "I already have an agent — skip"
   }
 }

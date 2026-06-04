@@ -4,20 +4,37 @@ import { ChevronDown, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { AvailabilityWindow } from "@/api/types";
 
+// System-defined capability / style keywords an AI agent might have. Users pick
+// from this list (max 10) instead of typing free-form tags.
 export const ALL_CAPABILITY_TAGS = [
-  "Analyze",
-  "Logic",
+  // Core capabilities
   "Research",
-  "Fast",
-  "Optimize",
-  "Economy",
-  "Plan",
-  "Image",
+  "Analyze",
+  "Reasoning",
+  "Logic",
   "Math",
+  "Coding",
+  "Data",
+  "Planning",
+  "Problem Solve",
+  "Optimize",
   "Creative",
+  "Writing",
+  "Summarize",
+  "Translation",
+  "Image",
+  "Vision",
+  "Search",
   "Schedule",
   "Graph",
-  "Problem Solve",
+  "Economy",
+  "Fast",
+  // Conversation style
+  "Concise",
+  "Detailed",
+  "Friendly",
+  "Formal",
+  "Proactive",
 ] as const;
 
 export const BASE_MODELS = [

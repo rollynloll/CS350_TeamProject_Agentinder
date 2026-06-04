@@ -81,7 +81,7 @@ export function SwipeCard({
 
       {/* Capability tags — Figma tag: bg text-sub/10, px8 py4, radius8, caption */}
       <div className="flex flex-wrap items-center gap-1 min-w-0">
-        {card.topTags.slice(0, 4).map((tag) => (
+        {card.topTags.slice(0, 3).map((tag) => (
           <span
             key={tag}
             className="inline-flex items-center rounded-[8px] bg-tag px-2 py-1 text-caption font-semibold text-text-muted"

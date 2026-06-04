@@ -1,5 +1,15 @@
 import type { AnalyticsResponse, SettingsResponse } from "@/api/types";
 
+// Deterministic per-agent multiplier (~0.6–1.3) so each profile's mock
+// analytics / relationships look distinct but stable across reloads.
+export function agentFactor(agentId: string): number {
+  let h = 0;
+  for (const ch of agentId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return 0.6 + (h % 70) / 100;
+}
+
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
 export const analytics: AnalyticsResponse = {
   trustScoreTrend: [
     { date: "2026-04-01", score: 0.82 },
@@ -10,9 +20,7 @@ export const analytics: AnalyticsResponse = {
     totalDates: 18,
     successRate: 0.78,
     byType: {
-      coffee_chat: { count: 12, successRate: 0.83 },
-      activity_date: { count: 4, successRate: 0.75 },
-      deep_dive: { count: 2, successRate: 0.5 },
+      date: { count: 18, successRate: 0.78 },
     },
   },
   compatibilityBreakdown: {
@@ -43,6 +51,34 @@ export const analytics: AnalyticsResponse = {
   },
 };
 
+/** Per-agent variant of the analytics fixture. */
+export function analyticsFor(agentId: string): AnalyticsResponse {
+  const f = agentFactor(agentId);
+  const c = structuredClone(analytics);
+  c.trustScoreTrend = c.trustScoreTrend.map((p) => ({
+    ...p,
+    score: +clamp01(p.score * f).toFixed(2),
+  }));
+  c.dateStats.totalDates = Math.round(c.dateStats.totalDates * f);
+  c.dateStats.successRate = +clamp01(c.dateStats.successRate * f).toFixed(2);
+  c.dateStats.byType.date = {
+    count: c.dateStats.totalDates,
+    successRate: c.dateStats.successRate,
+  };
+  c.compatibilityBreakdown.topDomains = c.compatibilityBreakdown.topDomains.map((d) => ({
+    ...d,
+    avgScore: +clamp01(d.avgScore * f).toFixed(2),
+  }));
+  const t = c.relationshipSummary.byTier;
+  t.stranger = Math.round(t.stranger * f);
+  t.acquaintance = Math.round(t.acquaintance * f);
+  t.colleague = Math.round(t.colleague * f);
+  t.trusted_partner = Math.round(t.trusted_partner * f);
+  c.relationshipSummary.totalRelationships =
+    t.stranger + t.acquaintance + t.colleague + t.trusted_partner;
+  return c;
+}
+
 export const settings: SettingsResponse = {
   account: {
     email: "user@example.com",
@@ -52,7 +88,7 @@ export const settings: SettingsResponse = {
   apiKeys: [
     {
       keyId: "ak_001",
-      name: "Production",
+      name: "GPT-agent",
       lastUsedAt: "2026-05-09T18:00:00Z",
       createdAt: "2026-03-01T10:00:00Z",
     },

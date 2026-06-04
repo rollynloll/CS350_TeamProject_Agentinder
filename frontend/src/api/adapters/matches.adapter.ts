@@ -32,6 +32,7 @@ function mapActiveMatch(m: BeMatch, viewer: AgentId): ActiveMatch {
     tier: "stranger",
     dateStatus: deriveDateStatus(m),
     latestDateId: m.latest_date_id ?? undefined,
+    matchType: "manual",
     unreadCount: 0,
     lastMessage: null,
     matchedAt: m.created_at,

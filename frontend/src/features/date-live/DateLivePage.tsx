@@ -20,9 +20,7 @@ type LiveMessage = {
 };
 
 const typeLabel: Record<string, string> = {
-  coffee_chat: "Coffee Chat",
-  activity_date: "Activity Date",
-  deep_dive: "Deep Dive",
+  date: "Date",
 };
 
 export function DateLivePage() {

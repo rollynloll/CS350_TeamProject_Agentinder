@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFeed, useSwipe } from "@/api/endpoints/feed";
 import { useMyAgents } from "@/api/endpoints/agents";
@@ -11,46 +11,75 @@ import { AgentDetailSheet } from "./components/AgentDetailSheet";
 import { MatchModal } from "./components/MatchModal";
 import type { FeedCard } from "@/api/types";
 
-type MatchInfo = { matchId: string; partnerName: string; icebreakers: string[] | null };
-
-// Carousel sizing — main card ~85% of the shell, leaving ~7.5% peek on each side.
-// Mobile: vw (shell fills viewport). Desktop: fixed pixels (shell is 393px).
-const CARD_W = "w-[85vw] md:w-[334px]";
-const EDGE_PAD = "px-[7.5vw] md:px-[29px]";
-const SNAP_PAD = "scroll-pl-[7.5vw] scroll-pr-[7.5vw] md:scroll-pl-[29px] md:scroll-pr-[29px]";
+type MatchInfo = {
+  matchId: string;
+  partnerName: string;
+  partnerAvatarUrl?: string;
+  icebreakers: string[] | null;
+};
 
 export function FeedPage() {
   const { activeAgentId } = useAuth();
   const navigate = useNavigate();
   const query = useFeed(activeAgentId ?? undefined);
   const swipe = useSwipe(activeAgentId ?? undefined);
+  const { data: agentsData, isSuccess: agentsLoaded } = useMyAgents();
   const [match, setMatch] = useState<MatchInfo | null>(null);
   const [detail, setDetail] = useState<FeedCard | null>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // activeAgentId 가 없으면 AuthedLayout 의 자동선택이 완료될 때까지 기다린다.
-  // 에이전트가 아예 없는 경우는 생성 안내를 표시한다.
-  const { data: agentsData, isSuccess: agentsLoaded } = useMyAgents();
+  const cards = query.data?.pages.flatMap((p) => p.cards) ?? [];
+  const count = cards.length;
 
-  // Auto-fetch next page when the trailing sentinel scrolls into view.
+  // One full card on screen; drag the strip horizontally to move between them.
+  const [index, setIndex] = useState(0);
+  const [drag, setDrag] = useState(0); // px the strip is offset during a drag
+  const [dragging, setDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const startX = useRef(0);
+  const movedRef = useRef(false);
+  const draggingRef = useRef(false);
+
+  const safeIndex = Math.min(index, Math.max(0, count - 1));
+
+  // Keep index in range if the list shrinks; prefetch as we near the end.
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0]?.isIntersecting &&
-          query.hasNextPage &&
-          !query.isFetchingNextPage
-        ) {
-          void query.fetchNextPage();
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [query]);
+    if (index > count - 1) setIndex(Math.max(0, count - 1));
+    if (count > 0 && index >= count - 2 && query.hasNextPage && !query.isFetchingNextPage) {
+      void query.fetchNextPage();
+    }
+  }, [index, count, query]);
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    startX.current = e.clientX;
+    movedRef.current = false;
+    draggingRef.current = true;
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - startX.current;
+    if (Math.abs(dx) > 6) movedRef.current = true;
+    // Rubber-band when dragging past the first/last card.
+    const atStart = safeIndex === 0 && dx > 0;
+    const atEnd = safeIndex === count - 1 && dx < 0;
+    setDrag(atStart || atEnd ? dx * 0.35 : dx);
+  };
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    const dx = e.clientX - startX.current;
+    const threshold = (trackRef.current?.clientWidth ?? 320) * 0.2;
+    if (movedRef.current) {
+      if (dx < -threshold && safeIndex < count - 1) setIndex(safeIndex + 1);
+      else if (dx > threshold && safeIndex > 0) setIndex(safeIndex - 1);
+    } else {
+      // Tap (no real movement) opens the card detail.
+      setDetail(cards[safeIndex]);
+    }
+    setDrag(0);
+  };
 
   const like = (card: FeedCard) => {
     if (swipe.isPending) return;
@@ -58,13 +87,11 @@ export function FeedPage() {
       { targetAgentId: card.agentId, action: "super_like" },
       {
         onSuccess: (res) => {
-          // 매치 성사 시 MatchModal 띄움.
-          // - res.matched: 백엔드가 카운터-스와이프 감지하고 새 match insert (정상 흐름)
-          // - card.superLikedYou: mock-only fallback. 상대가 이미 super liked한 상태 표시
           if (res.matched || card.superLikedYou) {
             setMatch({
               matchId: res.matchId ?? `mt_${card.agentId}`,
               partnerName: card.displayName,
+              partnerAvatarUrl: card.avatarUrl,
               icebreakers: res.icebreakers,
             });
           }
@@ -108,15 +135,11 @@ export function FeedPage() {
     if (query.error) {
       return (
         <div className="flex-1 min-h-0 flex items-center px-5">
-          <EmptyState
-            title="Something went wrong"
-            description={(query.error as Error).message}
-          />
+          <EmptyState title="Something went wrong" description={(query.error as Error).message} />
         </div>
       );
     }
-    const cards = query.data?.pages.flatMap((p) => p.cards) ?? [];
-    if (cards.length === 0) {
+    if (count === 0) {
       return (
         <div className="flex-1 min-h-0 flex items-center px-5">
           <EmptyState
@@ -128,25 +151,25 @@ export function FeedPage() {
     }
     return (
       <div
-        className={`flex-1 min-h-0 flex items-center overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide ${SNAP_PAD}`}
+        ref={trackRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className="flex-1 min-h-0 overflow-hidden flex items-center touch-pan-y cursor-grab active:cursor-grabbing"
       >
-        <div className={`flex items-stretch gap-3 ${EDGE_PAD}`}>
+        <div
+          className="flex h-full w-full items-center"
+          style={{
+            transform: `translateX(calc(${-safeIndex * 100}% + ${drag}px))`,
+            transition: dragging ? "none" : "transform 0.32s cubic-bezier(0.22,0.61,0.36,1)",
+          }}
+        >
           {cards.map((card) => (
-            <div
-              key={card.agentId}
-              onClick={() => setDetail(card)}
-              className={`shrink-0 snap-center cursor-pointer ${CARD_W}`}
-            >
+            <div key={card.agentId} className="w-full shrink-0 px-5">
               <SwipeCard card={card} onLike={(l) => l && like(card)} />
             </div>
           ))}
-          <div
-            ref={sentinelRef}
-            aria-hidden
-            className="shrink-0 flex items-center justify-center w-12"
-          >
-            {query.isFetchingNextPage ? <Spinner /> : null}
-          </div>
         </div>
       </div>
     );
@@ -175,9 +198,14 @@ export function FeedPage() {
         }}
         partnerName={match?.partnerName ?? ""}
         icebreakers={match?.icebreakers}
-        onMessage={() => {
+        onStartDate={() => {
           if (match) {
-            navigate(`/conversations/${match.matchId}`);
+            navigate(`/matches/${match.matchId}/start`, {
+              state: {
+                partnerName: match.partnerName,
+                partnerAvatarUrl: match.partnerAvatarUrl,
+              },
+            });
             setMatch(null);
           }
         }}

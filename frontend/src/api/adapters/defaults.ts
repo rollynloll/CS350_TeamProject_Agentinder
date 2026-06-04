@@ -31,10 +31,9 @@ export function normalizeTier(v: string | null | undefined): Tier {
   return (TIER_VALUES as string[]).includes(s) ? (s as Tier) : "stranger";
 }
 
-const DATE_TYPES: DateType[] = ["coffee_chat", "activity_date", "deep_dive"];
-export function normalizeDateType(v: string | null | undefined): DateType {
-  const s = (v ?? "coffee_chat").toLowerCase();
-  return (DATE_TYPES as string[]).includes(s) ? (s as DateType) : "coffee_chat";
+// Date kinds were unified into a single "Date"; any backend value maps to it.
+export function normalizeDateType(_v?: string | null): DateType {
+  return "date";
 }
 
 // Placeholder partner label until matches/messages endpoints join partner profiles.

@@ -20,10 +20,12 @@ export function MyAgentsPage() {
   const location = useLocation();
   const [newOpen, setNewOpen] = useState(false);
 
+  // The New profile form is driven entirely by the createNew navigation flag.
+  // "Add profile" sets it; picking an agent in the TopBar clears it (replace,
+  // state: null) which closes the form and shows that agent's profile.
   useEffect(() => {
-    if ((location.state as { createNew?: boolean } | null)?.createNew) {
-      setNewOpen(true);
-    }
+    const createNew = (location.state as { createNew?: boolean } | null)?.createNew === true;
+    setNewOpen(createNew);
   }, [location.state]);
 
   return (

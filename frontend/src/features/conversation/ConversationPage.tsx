@@ -71,8 +71,8 @@ export function ConversationPage() {
 
   const handleSend = (text: string) => {
     if (!activeAgentId || !matchId) return;
-    // Optimistic echo — the backend persists the user message but does NOT push
-    // it back over the chat topic (only the agent's reply is pushed).
+    // Optimistic echo — backend persists the user message but only pushes the
+    // agent's reply back over the chat topic.
     const optimistic: ChatMessage = {
       messageId: `local_${Date.now()}`,
       senderId: activeAgentId,
@@ -82,8 +82,6 @@ export function ConversationPage() {
       readAt: null,
     };
     setLive((prev) => [...prev, optimistic]);
-    // Send over WS — backend event "send_message" → saves + generates a reply
-    // pushed back on chat.{matchId}, which onFrame appends above.
     wsClient.sendAction("send_message", {
       match_id: matchId,
       agent_id: activeAgentId,
@@ -94,8 +92,8 @@ export function ConversationPage() {
   return (
     <QueryBoundary query={query}>
       {(data) => {
-        // Coffee Chat vs Date pill — stand-in until API spec adds activeDateType.
-        const pillLabel = data.matchInfo.canScheduleDate ? "Coffee Chat" : "Date";
+        // Date kinds were unified into a single "Date".
+        const pillLabel = "Date";
         const merged: ChatMessage[] = [...data.messages, ...live];
         return (
           <>
@@ -138,12 +136,16 @@ export function ConversationPage() {
                 ))
               )}
             </div>
-            <ChatInput onSubmit={handleSend} />
+            {/* Manual dates are user-driven — show the composer. Auto dates run
+                between the agents, so no input. */}
+            {data.matchInfo.matchType === "manual" ? (
+              <ChatInput onSubmit={handleSend} />
+            ) : null}
             <ConversationMenuSheet
               open={menuOpen}
               onOpenChange={setMenuOpen}
               partnerAgentId={data.matchInfo.partnerAgent.agentId}
-              matchId={data.matchInfo.matchId}
+              task={data.matchInfo.task}
               onViewProfile={() => {
                 setMenuOpen(false);
                 setProfileOpen(true);

@@ -71,7 +71,7 @@ export function mapEndRequest(req: EndDateRequest): BeEndDateRequest {
 export function mapEndResponse(be: BeEndDateResponse): LiveDateResponse {
   return {
     dateId: be.date_id,
-    type: "coffee_chat",
+    type: "date",
     status: "completed",
     partnerAgent: { agentId: "", displayName: "", avatarUrl: "", trustScore: null },
     startedAt: nowIso(),

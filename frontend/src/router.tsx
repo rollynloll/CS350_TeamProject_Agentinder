@@ -1,8 +1,11 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthedLayout } from "./layouts/AuthedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
+import { OnboardingLayout } from "./layouts/OnboardingLayout";
 import { LoginPage } from "./features/login/LoginPage";
 import { AuthCallbackPage } from "./features/login/AuthCallbackPage";
+import { TutorialPage } from "./features/onboarding/TutorialPage";
+import { FirstAgentPage } from "./features/onboarding/FirstAgentPage";
 import { FeedPage } from "./features/feed/FeedPage";
 import { DiscoverPage } from "./features/discover/DiscoverPage";
 import { MyAgentsPage } from "./features/agents/MyAgentsPage";
@@ -31,6 +34,13 @@ export const router = createBrowserRouter([
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/auth/callback", element: <AuthCallbackPage /> },
+    ],
+  },
+  {
+    element: <OnboardingLayout />,
+    children: [
+      { path: "/onboarding", element: <TutorialPage /> },
+      { path: "/onboarding/agent", element: <FirstAgentPage /> },
     ],
   },
   {

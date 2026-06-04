@@ -33,7 +33,8 @@ export type MessageId = string;
 export type Tier = "stranger" | "acquaintance" | "colleague" | "trusted_partner";
 export type Visibility = "public" | "restricted" | "hidden";
 export type SwipeAction = "like" | "pass" | "super_like";
-export type DateType = "coffee_chat" | "activity_date" | "deep_dive";
+// Date kinds were unified into a single "Date" — see SRS date-type decision.
+export type DateType = "date";
 export type DateStatus = "proposed" | "in_progress" | "completed" | "cancelled" | "no_show";
 
 export type InteractionStyle = {
@@ -251,6 +252,10 @@ export type ActiveMatch = {
   partnerAgent: PartnerAgent;
   tier: Tier;
   dateStatus: "coffee_chatting" | "deep_diving" | "idle";
+  /** How the match was formed — drives the "Dating(Auto)" label. */
+  matchType: "auto" | "manual";
+  /** Task the current date is about — shown on the Date Result screen. */
+  task?: string;
   unreadCount: number;
   lastMessage: {
     preview: string;
@@ -299,6 +304,8 @@ export type RelationshipsResponse = {
 export type DateHistoryItem = {
   dateId: DateId;
   type: DateType;
+  /** Task this date was about — shown on the Date Result screen. */
+  task?: string;
   status: DateStatus;
   startedAt: string;
   endedAt: string | null;
@@ -373,6 +380,10 @@ export type ConversationResponse = {
     tier: Tier;
     canScheduleDate: boolean;
     canSendMultimedia: boolean;
+    /** Task given to the current dating — shown in the conversation menu. */
+    task?: string;
+    /** Manual dates are user-driven (show the composer); auto dates are not. */
+    matchType?: "auto" | "manual";
   };
   messages: ChatMessage[];
 };

@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useAgentProfile, useUpdateAgent } from "@/api/endpoints/agents";
+import { useSettingsStore } from "@/store/settings";
 import type { AgentId, AgentProfile } from "@/api/types";
 import { Avatar } from "@/design-system/components/Avatar";
 import { QueryBoundary } from "@/design-system/components/QueryBoundary";
 import { TrustTag } from "@/design-system/components/TrustTag";
+import { ALL_CAPABILITY_TAGS } from "./ProfileForm";
 import { cn } from "@/lib/cn";
+
+const MAX_TAGS = 10;
 
 /**
  * Figma 프로필-편집 card (node 2052:3221): the active agent's editable profile —
@@ -21,12 +25,30 @@ function Editor({ profile }: { profile: AgentProfile }) {
   const update = useUpdateAgent(profile.agentId);
   const [bio, setBio] = useState(profile.bio);
   const [tags, setTags] = useState<string[]>(profile.capabilityTags);
-  const [adding, setAdding] = useState("");
   const [autoMatch, setAutoMatch] = useState(false);
   const [task, setTask] = useState("");
   const [casual, setCasual] = useState(profile.styleCasual ?? 50);
   const [detail, setDetail] = useState(profile.styleDetail ?? 50);
   const [bold, setBold] = useState(profile.styleBold ?? 50);
+
+  // API Key — pick a key registered in Settings (same UX as the New profile form).
+  const apiKeys = useSettingsStore((s) => s.apiKeys);
+  const [localKeys, setLocalKeys] = useState<string[]>([]);
+  const keyNames = [...apiKeys.map((k) => k.name), ...localKeys];
+  const [keyName, setKeyName] = useState("");
+  const [addKeyOpen, setAddKeyOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeySecret, setNewKeySecret] = useState("");
+
+  const addKey = () => {
+    const nm = newKeyName.trim();
+    if (!nm || !newKeySecret.trim()) return;
+    if (!keyNames.includes(nm)) setLocalKeys((prev) => [...prev, nm]);
+    setKeyName(nm);
+    setNewKeyName("");
+    setNewKeySecret("");
+    setAddKeyOpen(false);
+  };
 
   // Re-seed when switching to a different agent.
   useEffect(() => {
@@ -37,14 +59,20 @@ function Editor({ profile }: { profile: AgentProfile }) {
     setBold(profile.styleBold ?? 50);
   }, [profile.agentId, profile.bio, profile.capabilityTags, profile.styleCasual, profile.styleDetail, profile.styleBold]);
 
-  const addTag = () => {
-    const v = adding.trim();
-    if (v && !tags.includes(v)) setTags([...tags, v]);
-    setAdding("");
-  };
-
   const save = () =>
     update.mutate({ bio, capabilityTags: tags } as Parameters<typeof update.mutate>[0]);
+
+  const toggleTag = (tag: string) => {
+    setTags((prev) => {
+      const next = prev.includes(tag)
+        ? prev.filter((t) => t !== tag)
+        : prev.length >= MAX_TAGS
+          ? prev
+          : [...prev, tag];
+      update.mutate({ bio, capabilityTags: next } as Parameters<typeof update.mutate>[0]);
+      return next;
+    });
+  };
 
   return (
     <div className="rounded-[24px] bg-bg shadow-float p-4 flex flex-col gap-3">
@@ -75,43 +103,34 @@ function Editor({ profile }: { profile: AgentProfile }) {
         className="w-full resize-none rounded-[12px] bg-bg shadow-inset px-3 py-2 text-body2 leading-[1.4] text-text-muted focus:outline-none focus:text-text"
       />
 
-      {/* Tags with remove (x) + add */}
+      {/* Capability tags — pick from the system-defined list, up to MAX_TAGS. */}
+      <div className="flex items-center justify-between">
+        <p className="text-caption leading-[1.4] text-text-muted">Capability Tag</p>
+        <span className="text-caption text-text-subtle tabular-nums">
+          {tags.length}/{MAX_TAGS}
+        </span>
+      </div>
       <div className="flex flex-wrap items-center gap-1">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1 rounded-[8px] bg-tag pl-2 pr-1 py-1 text-caption font-semibold text-text-muted"
-          >
-            {tag}
+        {ALL_CAPABILITY_TAGS.map((tag) => {
+          const selected = tags.includes(tag);
+          const disabled = !selected && tags.length >= MAX_TAGS;
+          return (
             <button
+              key={tag}
               type="button"
-              onClick={() => {
-                setTags(tags.filter((x) => x !== tag));
-                save();
-              }}
-              aria-label={`Remove ${tag}`}
-              className="grid place-items-center rounded-full hover:text-danger"
+              onClick={() => toggleTag(tag)}
+              disabled={disabled}
+              aria-pressed={selected}
+              className={cn(
+                "rounded-[8px] px-2 py-1 text-caption font-semibold transition-colors",
+                selected ? "bg-primary text-primary-fg" : "bg-tag text-text-muted hover:text-text",
+                disabled && "opacity-40 cursor-not-allowed",
+              )}
             >
-              <X className="w-3 h-3" strokeWidth={2.5} />
+              {tag}
             </button>
-          </span>
-        ))}
-        <input
-          value={adding}
-          onChange={(e) => setAdding(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addTag();
-            }
-          }}
-          onBlur={() => {
-            addTag();
-            save();
-          }}
-          placeholder="+ add"
-          className="w-[64px] rounded-[8px] bg-bg shadow-inset px-2 py-1 text-caption text-text placeholder:text-text-subtle focus:outline-none"
-        />
+          );
+        })}
       </div>
 
       {/* Interaction Style */}
@@ -136,6 +155,79 @@ function Editor({ profile }: { profile: AgentProfile }) {
           className="w-full resize-none rounded-[12px] bg-bg shadow-inset px-3 py-2 text-body2 leading-[1.4] text-text placeholder:text-text-subtle focus:outline-none"
         />
       </div>
+
+      {/* API Key — pick a key registered in Settings */}
+      <div className="flex flex-col gap-2 pt-1">
+        <p className="text-body1 font-semibold text-text">API Key</p>
+        <div className="relative">
+          <select
+            value={keyName}
+            onChange={(e) => {
+              if (e.target.value === "__add__") {
+                setAddKeyOpen(true);
+                return;
+              }
+              setKeyName(e.target.value);
+            }}
+            className="w-full appearance-none rounded-[12px] bg-bg shadow-inset px-3 py-2 pr-9 text-body2 text-text focus:outline-none"
+          >
+            <option value="">Select API key</option>
+            {keyNames.map((nm) => (
+              <option key={nm} value={nm}>
+                {nm}
+              </option>
+            ))}
+            <option value="__add__">+ Add key</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+        </div>
+        {addKeyOpen ? (
+          <div className="flex flex-col gap-2">
+            <input
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              placeholder="Key name (e.g. GPT-agent)"
+              className="w-full rounded-[8px] bg-bg shadow-inset px-3 py-2 text-body2 text-text placeholder:text-text-subtle focus:outline-none"
+            />
+            <input
+              value={newKeySecret}
+              onChange={(e) => setNewKeySecret(e.target.value)}
+              placeholder="API key (e.g. sk-...)"
+              className="w-full rounded-[8px] bg-bg shadow-inset px-3 py-2 text-body2 text-text placeholder:text-text-subtle focus:outline-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAddKeyOpen(false);
+                  setNewKeyName("");
+                  setNewKeySecret("");
+                }}
+                className="rounded-[8px] bg-bg shadow-inset px-3 py-1 text-body2 font-semibold text-text-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={addKey}
+                className="rounded-[8px] bg-primary-light px-3 py-1 text-body2 font-semibold text-text"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Save */}
+      <button
+        type="button"
+        onClick={save}
+        disabled={update.isPending}
+        className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
+      >
+        {update.isPending ? "Saving…" : "Save"}
+      </button>
     </div>
   );
 }

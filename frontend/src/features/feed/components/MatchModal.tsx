@@ -11,13 +11,13 @@ export function MatchModal({
   onOpenChange,
   partnerName,
   icebreakers,
-  onMessage,
+  onStartDate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   partnerName: string;
   icebreakers?: string[] | null;
-  onMessage: () => void;
+  onStartDate: () => void;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -43,8 +43,8 @@ export function MatchModal({
           ) : null}
 
           <div className="mt-5 space-y-2">
-            <Button className="w-full" variant="pill" onClick={onMessage}>
-              Send a message
+            <Button className="w-full" variant="pill" onClick={onStartDate}>
+              Start Date
             </Button>
             <Dialog.Close asChild>
               <Button className="w-full" variant="secondary" size="sm">

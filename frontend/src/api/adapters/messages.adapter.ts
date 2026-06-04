@@ -28,6 +28,7 @@ export function mapConversation(be: BeMessagesResponse, matchId: MatchId): Conve
       tier: "stranger",
       canScheduleDate: true,
       canSendMultimedia: false,
+      matchType: "manual",
     },
     messages: (be.items ?? []).map(mapMessage),
   };

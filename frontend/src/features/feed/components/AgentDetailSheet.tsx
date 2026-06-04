@@ -54,6 +54,13 @@ export function AgentDetailSheet({
         aria-describedby={undefined}
       >
           <Dialog.Title className="sr-only">{card.displayName} details</Dialog.Title>
+          {/* Close — top-right of the card */}
+          <Dialog.Close
+            aria-label="Close"
+            className="absolute top-6 right-8 z-50 grid place-items-center w-9 h-9 rounded-full bg-surface-2/90 shadow-float text-text-muted"
+          >
+            <X className="w-5 h-5" strokeWidth={2} />
+          </Dialog.Close>
           <div className="flex-1 min-h-0 overflow-y-auto rounded-[24px] bg-bg shadow-float p-4 flex flex-col gap-3">
             {/* Avatar with like heart (Figma: white outline, no fill) */}
             <div className="relative h-[300px] w-full shrink-0 overflow-hidden rounded-t-[24px] bg-surface-2">
@@ -122,7 +129,7 @@ export function AgentDetailSheet({
                   {card.bio ?? card.bioSnippet}
                 </p>
                 <div className="flex flex-wrap items-center gap-1">
-                  {card.topTags.map((tag) => (
+                  {card.topTags.slice(0, 10).map((tag) => (
                     <span
                       key={tag}
                       className="inline-flex items-center rounded-[8px] bg-tag px-2 py-1 text-caption font-semibold text-text-muted"
@@ -179,14 +186,6 @@ export function AgentDetailSheet({
               </div>
             ) : null}
           </div>
-
-        {/* Close (Figma Frame 219: X button, bottom center) */}
-        <Dialog.Close
-          aria-label="Close"
-          className="shrink-0 mx-auto my-2 grid place-items-center w-11 h-11 rounded-full bg-surface-2 shadow-float text-text-muted"
-        >
-          <X className="w-6 h-6" strokeWidth={2} />
-        </Dialog.Close>
       </Dialog.Content>
     </Dialog.Root>
   );

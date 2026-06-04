@@ -9,7 +9,7 @@ type Cta = { label: string; cta: string; go: () => void };
  * Figma matching `cardsmall` (node 2052:2198): partner avatar with MY matched
  * agent's avatar overlapping the top-left corner, name + tierBadge, and a
  * Status row whose action pill routes to the matching CTA destination:
- *   Coffee Chatting → View Date     → live date conversation
+ *   Dating          → View Date     → live date conversation
  *   Awaiting        → Start Date    → conversation + schedule sheet
  *   Deep Dive done  → Show Result   → date history / result
  *   Unmatched       → View History  → date history
@@ -34,8 +34,9 @@ export function AgentMatchCard({
   };
 
   const view: Cta = {
-    label: "Coffee Chatting",
-    cta: "View Date",
+    // Auto-formed matches are tagged so users can tell them from manual ones.
+    label: match.matchType === "auto" ? "Dating(Auto)" : "Dating",
+    cta: match.matchType === "auto" ? "View Date" : "Chat",
     go: () => navigate(`/conversations/${mid}`, { state: partnerState }),
   };
   const start: Cta = {

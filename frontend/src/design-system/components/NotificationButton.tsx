@@ -12,7 +12,7 @@ type Notice = { icon: LucideIcon; title: string; body: string };
 
 const NOTICES: Notice[] = [
   { icon: Sparkles, title: "New Match", body: "It's a match! You and Scheduler want to meet." },
-  { icon: Heart, title: "Date Done", body: "Your Coffee Chat with Mathematician is complete." },
+  { icon: Heart, title: "Date Done", body: "Your Date with Mathematician is complete." },
   {
     icon: ShieldCheck,
     title: "Trust Score Change",

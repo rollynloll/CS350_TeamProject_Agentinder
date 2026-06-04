@@ -1,29 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useScheduleDate } from "@/api/endpoints/dates";
 import { Avatar } from "@/design-system/components/Avatar";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { TierBadge } from "@/design-system/components/TierBadge";
-import type { DateType, Tier, WsFrame } from "@/api/types";
-import { cn } from "@/lib/cn";
-import { nowLocalInput } from "@/lib/datetime";
-import { useTopic } from "@/api/ws/hooks";
-import { topics } from "@/api/ws/topics";
+import type { DateType, Tier } from "@/api/types";
 
 type StartState = {
   partnerName?: string;
-  partnerAgentId?: string;
   partnerAvatarUrl?: string;
   tier?: Tier;
   myAvatarUrl?: string;
-  dateId?: string;
 };
-
-const dateTypes: Array<{ value: DateType; label: string }> = [
-  { value: "coffee_chat", label: "Coffee Chat" },
-  { value: "activity_date", label: "Activity Date" },
-  { value: "deep_dive", label: "Deep Dive" },
-];
 
 /**
  * Figma 매칭-스타트데이트 (node 2052:2730): a full in-frame screen (not an
@@ -36,54 +24,15 @@ export function StartDatePage() {
   const s = (useLocation().state as StartState | null) ?? {};
   const schedule = useScheduleDate(matchId ?? "");
 
-  const [type, setType] = useState<DateType>("coffee_chat");
+  const type: DateType = "date";
   const [task, setTask] = useState("");
   const [time, setTime] = useState("");
-  const [waiting, setWaiting] = useState(false);
-  const [waitingDateId, setWaitingDateId] = useState<string | undefined>();
-  const minTime = useMemo(() => nowLocalInput(), []);
-
-  // 첫 번째 호출자: date_started 이벤트 수신 시 대화방으로 이동
-  const onDateFrame = useCallback(
-    (frame: WsFrame) => {
-      if ((frame.payload as { event?: string } | undefined)?.event === "date_started") {
-        navigate(`/conversations/${matchId}`, {
-          state: { ...s, dateId: waitingDateId },
-          replace: true,
-        });
-      }
-    },
-    [navigate, matchId, s, waitingDateId],
-  );
-  useTopic(waiting && waitingDateId ? topics.date(waitingDateId) : null, onDateFrame);
 
   const start = () => {
-    if (!matchId || schedule.isPending) return;
+    if (!matchId || !time || schedule.isPending) return;
     schedule.mutate(
-      {
-        type,
-        proposedTime: time ? new Date(time).toISOString() : undefined,
-        message: task || undefined,
-      },
-      {
-        onSuccess: (data) => {
-          const raw = data as {
-            waiting?: boolean;
-            started?: boolean;
-            date_id?: string;
-            dateId?: string;
-          };
-          const dateId = raw.date_id ?? raw.dateId;
-          if (raw.waiting) {
-            setWaitingDateId(dateId);
-            setWaiting(true);
-          } else {
-            navigate(`/conversations/${matchId}`, {
-              state: { ...s, dateId },
-            });
-          }
-        },
-      },
+      { type, proposedTime: new Date(time).toISOString(), message: task || undefined },
+      { onSuccess: () => navigate(`/conversations/${matchId}`) },
     );
   };
 
@@ -123,28 +72,6 @@ export function StartDatePage() {
           ) : null}
         </div>
 
-        {/* Date Type */}
-        <div className="space-y-2">
-          <h2 className="text-h3 font-semibold text-text">Date Type</h2>
-          <div className="flex flex-wrap gap-2">
-            {dateTypes.map((d) => (
-              <button
-                key={d.value}
-                type="button"
-                onClick={() => setType(d.value)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-body2 font-semibold transition-all",
-                  type === d.value
-                    ? "bg-primary-light text-text"
-                    : "bg-bg shadow-inset text-text-muted",
-                )}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Task */}
         <div className="space-y-2">
           <h2 className="text-h3 font-semibold text-text">Task</h2>
@@ -163,30 +90,20 @@ export function StartDatePage() {
           <input
             type="datetime-local"
             value={time}
-            min={minTime}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full rounded-[12px] bg-bg shadow-inset px-3 py-3 text-body1 text-text placeholder:text-text-subtle focus:outline-none"
+            className="w-full rounded-[12px] bg-bg shadow-inset px-3 py-3 text-body1 text-text focus:outline-none [color-scheme:dark]"
           />
         </div>
 
-        {/* Start Date / Waiting */}
-        {waiting ? (
-          <div className="w-full rounded-[12px] bg-bg shadow-inset py-3 text-center space-y-1">
-            <p className="text-body1 font-bold text-text">상대방을 기다리는 중…</p>
-            <p className="text-caption text-text-muted">
-              상대방이 Start Date를 누르면 대화가 시작됩니다.
-            </p>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={start}
-            disabled={schedule.isPending}
-            className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
-          >
-            Start Date
-          </button>
-        )}
+        {/* Start Date */}
+        <button
+          type="button"
+          onClick={start}
+          disabled={!time || schedule.isPending}
+          className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
+        >
+          Start Date
+        </button>
       </div>
     </>
   );

@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { Search } from "lucide-react";
-import { useKeyboard } from "@/design-system/components/keyboard-context";
 import { cn } from "@/lib/cn";
+import { useKeyboardOpen } from "@/lib/useKeyboardOpen";
+import { useVisualViewportBottom } from "@/lib/useVisualViewportBottom";
 
 export function SearchInput({
   value,
@@ -16,10 +16,9 @@ export function SearchInput({
   placeholder?: string;
   className?: string;
 }) {
-  const { open, height } = useKeyboard();
-  const [focused, setFocused] = useState(false);
-  // While typing, dock the field directly above the keyboard.
-  const docked = open && focused;
+  const keyboardOpen = useKeyboardOpen();
+  const vpBottom = useVisualViewportBottom();
+  const docked = keyboardOpen && vpBottom !== null;
 
   return (
     <form
@@ -27,10 +26,12 @@ export function SearchInput({
         e.preventDefault();
         onSubmit?.(value);
       }}
-      style={docked ? { bottom: height } : undefined}
+      // Dock above the keyboard via top + translateY(-100%) (iOS mis-positions
+      // fixed `bottom` when the keyboard is up). Desktop never docks (no keyboard).
+      style={docked ? { position: "fixed", left: 0, right: 0, top: vpBottom, transform: "translateY(-100%)" } : undefined}
       className={cn(
         "shrink-0 bg-bg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
-        docked && "absolute inset-x-0 z-[60] pb-2 border-t border-border",
+        docked && "z-[60] pb-2 border-t border-border",
         className,
       )}
     >
@@ -40,8 +41,6 @@ export function SearchInput({
           type="search"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
           placeholder={placeholder}
           aria-label="Search agents"
           className="flex-1 bg-transparent text-body1 placeholder:text-text-subtle focus:outline-none py-2"

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { useAuth } from "@/store/auth";
@@ -36,6 +37,7 @@ function Body() {
   const updateNotifications = useSettingsStore((s) => s.updateNotifications);
   const updatePreferences = useSettingsStore((s) => s.updatePreferences);
   const addApiKey = useSettingsStore((s) => s.addApiKey);
+  const navigate = useNavigate();
   const { logout } = useAuth();
 
   // UI-only toggles that don't map to the persisted schema yet.
@@ -78,6 +80,16 @@ function Body() {
           <Row label="MFA">
             <Switch checked={mfa} onChange={setMfa} />
           </Row>
+          <Row label="Logout">
+            <GhostButton
+              onClick={() => {
+                logout();
+                navigate("/login");
+              }}
+            >
+              Logout
+            </GhostButton>
+          </Row>
         </SubGroup>
         <Divider />
         <SubGroup label="Connected accounts">
@@ -88,10 +100,6 @@ function Body() {
         <Divider />
         <Row label="Export Data">
           <GhostButton>Export</GhostButton>
-        </Row>
-        <Divider />
-        <Row label="Log Out">
-          <GhostButton onClick={() => logout()}>Log out</GhostButton>
         </Row>
         <Divider />
         <Row label="Delete Account">
@@ -197,10 +205,6 @@ function Body() {
             </div>
           )}
         </SubGroup>
-        <Divider />
-        <Row label="Regenerate Credentials">
-          <GhostButton>Generate</GhostButton>
-        </Row>
         <Divider />
         <SubGroup label="Emergency Controls">
           <Row label="Hide from Feed">

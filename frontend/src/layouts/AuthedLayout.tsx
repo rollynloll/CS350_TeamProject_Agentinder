@@ -4,6 +4,7 @@ import { Home, MessageCircle, Search, Settings as SettingsIcon, UserSquare2 } fr
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
 import { useSettingsStore } from "@/store/settings";
+import { isOnboarded } from "@/lib/onboarding";
 import { ensurePrincipal } from "@/api/endpoints/principals";
 import { useMyAgents } from "@/api/endpoints/agents";
 import { wsClient } from "@/api/ws/client";
@@ -12,6 +13,22 @@ import { cn } from "@/lib/cn";
 import { topics } from "@/api/ws/topics";
 import { MobileShell } from "./MobileShell";
 import { BottomNav } from "@/design-system/components/BottomNav";
+import { useKeyboardOpen } from "@/lib/useKeyboardOpen";
+
+// Reserves the fixed BottomNav's footprint, but collapses while the keyboard is
+// up (the nav hides then) so a bottom-docked input sits flush above the keyboard.
+function NavSpacer() {
+  const open = useKeyboardOpen();
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "shrink-0 md:hidden",
+        open ? "h-0" : "h-[calc(64px+env(safe-area-inset-bottom))]",
+      )}
+    />
+  );
+}
 
 // Figma primary nav: home / search / chat / profile, with settings via gear.
 // Relationships + Analytics live inside the Profile tab (not top-level nav).
@@ -46,6 +63,10 @@ export function AuthedLayout() {
   useEffect(() => {
     if (!token) {
       navigate("/login", { replace: true });
+      return;
+    }
+    if (!isOnboarded()) {
+      navigate("/onboarding", { replace: true });
       return;
     }
     let cancelled = false;
@@ -93,6 +114,9 @@ export function AuthedLayout() {
   if (!token) return null;
 
   return (
+    // h-full = #root height = --app-h (the visible viewport). BottomNav pins to
+    // the bottom; when the keyboard opens the shell shrinks to the visible area
+    // so the bottom search bar rides up with it instead of being shoved away.
     <div className="h-full flex overflow-hidden">
       <aside className="hidden md:flex w-60 flex-col border-r border-border bg-bg">
         <div className="px-5 py-5">
@@ -150,6 +174,10 @@ export function AuthedLayout() {
         <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <Outlet />
         </main>
+        {/* Mobile: the nav is fixed (out of flow); reserve its footprint (incl.
+            safe area) so content isn't hidden behind it. Collapses with the
+            keyboard. Desktop: nav is in flow, no spacer. */}
+        <NavSpacer />
         <BottomNav />
       </MobileShell>
     </div>

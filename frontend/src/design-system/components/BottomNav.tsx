@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Home, MessageSquare, Search, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useKeyboardOpen } from "@/lib/useKeyboardOpen";
 
 type Tab = {
   to: string;
@@ -47,11 +48,20 @@ const tabs: Tab[] = [
  */
 export function BottomNav() {
   const { pathname } = useLocation();
+  const keyboardOpen = useKeyboardOpen();
 
   return (
     <nav
       aria-label="Primary"
-      className="shrink-0 h-[90px] bg-surface shadow-elevated flex items-start justify-between px-5 pt-3 pb-[env(safe-area-inset-bottom)]"
+      // Mobile: fixed to the viewport bottom so the keyboard overlays it and it
+      // can't ride up with the focused input. Desktop: back in the frame's flow.
+      // Height includes the iOS home-indicator safe area so the bar's background
+      // reaches the very bottom of the screen in standalone (Add to Home Screen).
+      // When the keyboard is up, hide the bar on mobile (desktop keeps it).
+      className={cn(
+        "fixed inset-x-0 bottom-0 z-30 md:static md:z-auto shrink-0 h-[calc(64px+env(safe-area-inset-bottom))] bg-surface shadow-elevated flex items-start justify-between px-5 pt-3 pb-[env(safe-area-inset-bottom)]",
+        keyboardOpen && "max-md:hidden",
+      )}
     >
       {tabs.map(({ to, icon: Icon, label, isActive }) => {
         const active = isActive(pathname);

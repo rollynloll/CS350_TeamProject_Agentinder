@@ -1,6 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, Plus, Settings as SettingsIcon } from "lucide-react";
+import { ChevronDown, ImagePlus, Plus, Settings as SettingsIcon } from "lucide-react";
 import { useMyAgents } from "@/api/endpoints/agents";
 import { useAuth } from "@/store/auth";
 import { Avatar } from "./Avatar";
@@ -18,6 +18,7 @@ export function TopBar() {
   const agents = data?.agents ?? [];
   const active = agents.find((a) => a.agentId === activeAgentId) ?? agents[0];
   const location = useLocation();
+  const navigate = useNavigate();
   const creatingNew =
     location.pathname === "/agents" &&
     (location.state as { createNew?: boolean } | null)?.createNew === true;
@@ -32,12 +33,18 @@ export function TopBar() {
             className="flex items-center gap-2 rounded-full pr-2 text-text outline-none"
             aria-label="Switch active agent"
           >
-            <Avatar
-              src={active?.avatarUrl}
-              name={active?.displayName ?? "?"}
-              size="sm"
-              className="!w-7 !h-7"
-            />
+            {creatingNew ? (
+              <span className="grid place-items-center w-7 h-7 rounded-full bg-surface-2 text-text-muted">
+                <ImagePlus className="w-4 h-4" strokeWidth={1.75} />
+              </span>
+            ) : (
+              <Avatar
+                src={active?.avatarUrl}
+                name={active?.displayName ?? "?"}
+                size="sm"
+                className="!w-7 !h-7"
+              />
+            )}
             <span className="text-h3 font-semibold truncate max-w-[140px]">
               {label}
             </span>
@@ -53,7 +60,11 @@ export function TopBar() {
             {agents.map((a) => (
               <DropdownMenu.Item
                 key={a.agentId}
-                onSelect={() => setActiveAgent(a.agentId)}
+                onSelect={() => {
+                  setActiveAgent(a.agentId);
+                  // Clear the createNew flag so the label/form leave "New profile".
+                  if (creatingNew) navigate("/agents", { replace: true, state: null });
+                }}
                 className={cn(
                   "flex items-center gap-2 px-2 py-2 rounded-lg text-body1 cursor-pointer outline-none",
                   "data-[highlighted]:bg-bg",

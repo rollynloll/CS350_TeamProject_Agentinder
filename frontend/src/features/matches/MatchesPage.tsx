@@ -21,15 +21,18 @@ export function MatchesPage() {
 
   return (
     <>
-      <header className="shrink-0 flex items-center justify-end gap-1 px-5 pt-4 pb-1">
-        <NotificationButton />
-        <Link
-          to="/settings"
-          aria-label="Open settings"
-          className="grid place-items-center w-11 h-11 rounded-full text-text hover:bg-surface transition-colors"
-        >
-          <SettingsIcon className="w-6 h-6" strokeWidth={1.75} />
-        </Link>
+      <header className="shrink-0 flex items-center justify-between gap-2 px-5 pt-4 pb-2">
+        <h2 className="text-h2 font-bold text-text">Active Matches</h2>
+        <div className="flex items-center gap-2">
+          <NotificationButton />
+          <Link
+            to="/settings"
+            aria-label="Open settings"
+            className="grid place-items-center w-11 h-11 rounded-full text-text hover:bg-surface transition-colors"
+          >
+            <SettingsIcon className="w-6 h-6" strokeWidth={1.75} />
+          </Link>
+        </div>
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1 pb-6 space-y-6">
@@ -39,7 +42,6 @@ export function MatchesPage() {
               s.matches.map((m) => ({ ...m, myAvatarUrl: avatarOf(s.agentId) })),
             );
             const active = all.filter((m) => m.approvalStatus !== "rejected");
-            const past = all.filter((m) => m.approvalStatus === "rejected");
 
             if (all.length === 0) {
               return (
@@ -51,23 +53,11 @@ export function MatchesPage() {
             }
 
             return (
-              <>
-                <section className="space-y-3">
-                  <h2 className="text-h2 font-bold text-text">Active Matches</h2>
-                  {active.map((m) => (
-                    <AgentMatchCard key={m.matchId} match={m} myAvatarUrl={m.myAvatarUrl} />
-                  ))}
-                </section>
-
-                {past.length > 0 ? (
-                  <section className="space-y-3">
-                    <h2 className="text-h2 font-bold text-text">Past Matches</h2>
-                    {past.map((m) => (
-                      <AgentMatchCard key={m.matchId} match={m} myAvatarUrl={m.myAvatarUrl} />
-                    ))}
-                  </section>
-                ) : null}
-              </>
+              <section className="space-y-3">
+                {active.map((m) => (
+                  <AgentMatchCard key={m.matchId} match={m} myAvatarUrl={m.myAvatarUrl} />
+                ))}
+              </section>
             );
           }}
         </QueryBoundary>
