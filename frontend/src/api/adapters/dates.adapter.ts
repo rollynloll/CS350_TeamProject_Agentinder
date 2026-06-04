@@ -63,7 +63,8 @@ export function mapEndRequest(req: EndDateRequest): BeEndDateRequest {
   return {
     outcome: req.outcome,
     rating_stars: req.rating,
-    rating_compatibility: compat != null ? compat / 5 : undefined,
+    rating_compatibility: compat != null ? compat / 100 : undefined,
+    rated_agent_id: req.ratedAgentId,
   };
 }
 

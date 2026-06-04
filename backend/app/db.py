@@ -87,10 +87,17 @@ async def get_matches_for_agent(agent_id: UUID, status: str | None = None) -> li
         "SELECT m.*,"
         " CASE WHEN m.agent_a_id = $1 THEN m.agent_b_id ELSE m.agent_a_id END AS counterpart_id,"
         " ap.display_name AS counterpart_name, ap.avatar_url AS counterpart_avatar,"
-        " ap.tier_badge AS counterpart_tier_badge, ap.trust_score AS counterpart_trust_score"
+        " ap.tier_badge AS counterpart_tier_badge, ap.trust_score AS counterpart_trust_score,"
+        " ld.date_id AS latest_date_id,"
+        " ld.started_at AS latest_date_started_at,"
+        " ld.ended_at AS latest_date_ended_at"
         " FROM matches m"
         " JOIN agent_profiles ap"
         "   ON ap.agent_id = CASE WHEN m.agent_a_id = $1 THEN m.agent_b_id ELSE m.agent_a_id END"
+        " LEFT JOIN LATERAL ("
+        "   SELECT date_id, started_at, ended_at FROM dates"
+        "   WHERE match_id = m.match_id ORDER BY created_at DESC LIMIT 1"
+        " ) ld ON true"
         " WHERE (m.agent_a_id = $1 OR m.agent_b_id = $1)"
     )
     if status:
@@ -372,6 +379,32 @@ async def upsert_principal(principal_id: UUID, email: str, name: str) -> asyncpg
     return await get_principal_row(principal_id)
 
 
+async def get_agent_full(agent_id: UUID) -> asyncpg.Record | None:
+    """단일 에이전트를 Agent 객체 재구성에 필요한 전체 personality 필드와 함께 반환."""
+    return await get_pool().fetchrow(
+        "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model,"
+        " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
+        " aper.thinking_style, aper.values, aper.conflict_style,"
+        " aper.collaboration_goal, aper.domain_interest, aper.system_prompt_cache,"
+        " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
+        " FROM agents a"
+        " JOIN agent_profiles ap USING (agent_id)"
+        " LEFT JOIN agent_personalities aper USING (agent_id)"
+        " LEFT JOIN agent_capability_tags act USING (agent_id)"
+        " LEFT JOIN capability_vocabulary cv USING (tag_id)"
+        " WHERE a.agent_id = $1"
+        " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model,"
+        " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
+        " aper.thinking_style, aper.values, aper.conflict_style,"
+        " aper.collaboration_goal, aper.domain_interest, aper.system_prompt_cache",
+        agent_id,
+    )
+
+
 async def get_principal_agents_full(principal_id: UUID) -> list[asyncpg.Record]:
     """principal의 모든 에이전트를 Agent 객체 재구성에 필요한 전체 필드와 함께 반환."""
     return await get_pool().fetch(
@@ -520,3 +553,131 @@ async def sync_capability_tags(agent_id: UUID, tag_names: list[str]) -> None:
                     "INSERT INTO agent_capability_tags (agent_id, tag_id) VALUES ($1, $2)",
                     [(agent_id, tid) for tid in tag_ids],
                 )
+
+
+# ── Ratings ───────────────────────────────────────────────────────────────
+
+async def insert_rating(
+    date_id: UUID,
+    rater_principal_id: UUID,
+    rated_agent_id: UUID,
+    stars: int,
+    compatibility: float,
+) -> None:
+    # compatibility는 0~1 float → DB는 smallint 1~5이므로 변환
+    compat_int = max(1, min(5, round(compatibility * 5)))
+    await get_pool().execute(
+        "INSERT INTO ratings (date_id, rater_principal_id, rated_agent_id, stars, compatibility)"
+        " VALUES ($1, $2, $3, $4, $5)"
+        " ON CONFLICT (date_id, rater_principal_id, rated_agent_id) DO NOTHING",
+        date_id, rater_principal_id, rated_agent_id, stars, compat_int,
+    )
+
+
+# ── Relationships ─────────────────────────────────────────────────────────
+
+async def upsert_relationship(
+    agent_a_id: UUID,
+    agent_b_id: UUID,
+    successful_dates: int,
+    avg_rating: float,
+    tier: str,
+) -> None:
+    # CHECK 제약: agent_a_id < agent_b_id
+    a, b = (agent_a_id, agent_b_id) if str(agent_a_id) < str(agent_b_id) else (agent_b_id, agent_a_id)
+    await get_pool().execute(
+        "INSERT INTO relationships (agent_a_id, agent_b_id, successful_dates, avg_rating, tier)"
+        " VALUES ($1, $2, $3, $4, $5::tier_enum)"
+        " ON CONFLICT (agent_a_id, agent_b_id) DO UPDATE"
+        "   SET successful_dates = $3, avg_rating = $4, tier = $5::tier_enum, updated_at = now()",
+        a, b, successful_dates, avg_rating, tier.lower(),
+    )
+
+
+async def upsert_trust_score(
+    agent_id: UUID,
+    composite: float | None,
+    peer_ratings_avg: float,
+    data_point_count: int,
+) -> None:
+    await get_pool().execute(
+        "INSERT INTO trust_scores (agent_id, composite, peer_ratings_avg, data_point_count)"
+        " VALUES ($1, $2, $3, $4)"
+        " ON CONFLICT (agent_id) DO UPDATE"
+        "   SET composite = $2, peer_ratings_avg = $3,"
+        "       data_point_count = $4, last_calculated_at = now()",
+        agent_id, composite, peer_ratings_avg, data_point_count,
+    )
+
+
+async def update_agent_tier(agent_id: UUID, tier: str) -> None:
+    await get_pool().execute(
+        "UPDATE agent_profiles SET tier_badge = $1::tier_enum WHERE agent_id = $2",
+        tier.lower(), agent_id,
+    )
+
+
+async def get_relationships_for_agent(agent_id: UUID) -> list[asyncpg.Record]:
+    return await get_pool().fetch(
+        "SELECT r.*,"
+        " CASE WHEN r.agent_a_id = $1 THEN r.agent_b_id ELSE r.agent_a_id END AS partner_id,"
+        " ap.display_name AS partner_name, ap.avatar_url AS partner_avatar,"
+        " ap.trust_score AS partner_trust_score,"
+        " m.match_id"
+        " FROM relationships r"
+        " JOIN agent_profiles ap"
+        "   ON ap.agent_id = CASE WHEN r.agent_a_id = $1 THEN r.agent_b_id ELSE r.agent_a_id END"
+        " LEFT JOIN matches m"
+        "   ON (m.agent_a_id = r.agent_a_id AND m.agent_b_id = r.agent_b_id)"
+        "   OR (m.agent_a_id = r.agent_b_id AND m.agent_b_id = r.agent_a_id)"
+        " WHERE r.agent_a_id = $1 OR r.agent_b_id = $1"
+        " ORDER BY r.tier DESC, r.updated_at DESC",
+        agent_id,
+    )
+
+
+# ── Analytics ─────────────────────────────────────────────────────────────
+
+async def get_analytics_date_stats(agent_id: UUID, since_dt) -> asyncpg.Record | None:
+    """에이전트가 참여한 dates의 통계."""
+    return await get_pool().fetchrow(
+        "SELECT"
+        " COUNT(*) FILTER (WHERE d.ended_at IS NOT NULL) AS total_dates,"
+        " COUNT(*) FILTER (WHERE d.outcome = 'completed') AS successful_dates,"
+        " ROUND(AVG(r.stars)::numeric, 2) AS avg_stars,"
+        " COUNT(*) FILTER (WHERE d.type = 'coffee_chat') AS coffee_chat_count,"
+        " COUNT(*) FILTER (WHERE d.type = 'deep_dive') AS deep_dive_count,"
+        " COUNT(*) FILTER (WHERE d.type = 'activity_date') AS activity_date_count"
+        " FROM dates d"
+        " JOIN matches m ON m.match_id = d.match_id"
+        " LEFT JOIN ratings r ON r.date_id = d.date_id AND r.rated_agent_id = $1"
+        " WHERE (m.agent_a_id = $1 OR m.agent_b_id = $1)"
+        "   AND ($2::timestamptz IS NULL OR d.created_at >= $2)",
+        agent_id, since_dt,
+    )
+
+
+async def get_analytics_relationship_tiers(agent_id: UUID) -> list[asyncpg.Record]:
+    """에이전트의 관계 티어 현황."""
+    return await get_pool().fetch(
+        "SELECT tier, COUNT(*) AS count"
+        " FROM relationships"
+        " WHERE agent_a_id = $1 OR agent_b_id = $1"
+        " GROUP BY tier",
+        agent_id,
+    )
+
+
+async def get_analytics_recent_dates(agent_id: UUID, since_dt, limit: int = 10) -> list[asyncpg.Record]:
+    """최근 데이트 이력 (신뢰 점수 추이용)."""
+    return await get_pool().fetch(
+        "SELECT d.ended_at, r.stars, r.compatibility"
+        " FROM dates d"
+        " JOIN matches m ON m.match_id = d.match_id"
+        " LEFT JOIN ratings r ON r.date_id = d.date_id AND r.rated_agent_id = $1"
+        " WHERE (m.agent_a_id = $1 OR m.agent_b_id = $1)"
+        "   AND d.ended_at IS NOT NULL"
+        "   AND ($2::timestamptz IS NULL OR d.created_at >= $2)"
+        " ORDER BY d.ended_at DESC LIMIT $3",
+        agent_id, since_dt, limit,
+    )

@@ -13,12 +13,14 @@ from .config import settings
 from .deps import init_singletons
 from .handlers import (
     agent_profile_handler,
+    analytics_handler,
     auth_handler,
     date_handler,
     feed_handler,
     match_handler,
     message_handler,
     principal_handler,
+    relationship_handler,
 )
 from .transport import ws_transport
 
@@ -51,12 +53,14 @@ app.add_middleware(
 )
 
 app.include_router(auth_handler.router)
+app.include_router(analytics_handler.router)
 app.include_router(principal_handler.router)
 app.include_router(agent_profile_handler.router)
 app.include_router(feed_handler.router)
 app.include_router(match_handler.router)
 app.include_router(message_handler.router)
 app.include_router(date_handler.router)
+app.include_router(relationship_handler.router)
 app.include_router(ws_transport.router)
 
 

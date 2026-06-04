@@ -12,24 +12,30 @@ function partnerIdOf(m: BeMatch, viewer: AgentId): AgentId {
   return m.agent_a_id === viewer ? m.agent_b_id : m.agent_a_id;
 }
 
+function deriveDateStatus(m: BeMatch): ActiveMatch["dateStatus"] {
+  if (!m.latest_date_id) return "idle";
+  if (m.latest_date_started_at && !m.latest_date_ended_at) return "coffee_chatting";
+  if (m.latest_date_ended_at) return "deep_diving";
+  return "idle";
+}
+
 function mapActiveMatch(m: BeMatch, viewer: AgentId): ActiveMatch {
   const partnerId = partnerIdOf(m, viewer);
   return {
     matchId: m.match_id,
     partnerAgent: {
       agentId: partnerId,
-      displayName: partnerLabel(partnerId),
-      avatarUrl: avatarOrFallback(null, partnerId),
-      trustScore: null,
+      displayName: m.counterpart_name || partnerLabel(partnerId),
+      avatarUrl: avatarOrFallback(m.counterpart_avatar, partnerId),
+      trustScore: m.counterpart_trust_score ?? null,
     },
     tier: "stranger",
-    dateStatus: "idle",
+    dateStatus: deriveDateStatus(m),
+    latestDateId: m.latest_date_id ?? undefined,
     unreadCount: 0,
     lastMessage: null,
     matchedAt: m.created_at,
-    approvalStatus: m.status
-      ? (m.status as NonNullable<ActiveMatch["approvalStatus"]>)
-      : undefined,
+    approvalStatus: m.status ? (m.status as NonNullable<ActiveMatch["approvalStatus"]>) : undefined,
   };
 }
 

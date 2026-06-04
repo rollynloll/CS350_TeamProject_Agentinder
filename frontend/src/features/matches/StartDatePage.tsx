@@ -1,18 +1,22 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useScheduleDate } from "@/api/endpoints/dates";
 import { Avatar } from "@/design-system/components/Avatar";
 import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { TierBadge } from "@/design-system/components/TierBadge";
-import type { DateType, Tier } from "@/api/types";
+import type { DateType, Tier, WsFrame } from "@/api/types";
 import { cn } from "@/lib/cn";
 import { nowLocalInput } from "@/lib/datetime";
+import { useTopic } from "@/api/ws/hooks";
+import { topics } from "@/api/ws/topics";
 
 type StartState = {
   partnerName?: string;
+  partnerAgentId?: string;
   partnerAvatarUrl?: string;
   tier?: Tier;
   myAvatarUrl?: string;
+  dateId?: string;
 };
 
 const dateTypes: Array<{ value: DateType; label: string }> = [
@@ -35,7 +39,23 @@ export function StartDatePage() {
   const [type, setType] = useState<DateType>("coffee_chat");
   const [task, setTask] = useState("");
   const [time, setTime] = useState("");
+  const [waiting, setWaiting] = useState(false);
+  const [waitingDateId, setWaitingDateId] = useState<string | undefined>();
   const minTime = useMemo(() => nowLocalInput(), []);
+
+  // 첫 번째 호출자: date_started 이벤트 수신 시 대화방으로 이동
+  const onDateFrame = useCallback(
+    (frame: WsFrame) => {
+      if ((frame.payload as { event?: string } | undefined)?.event === "date_started") {
+        navigate(`/conversations/${matchId}`, {
+          state: { ...s, dateId: waitingDateId },
+          replace: true,
+        });
+      }
+    },
+    [navigate, matchId, s, waitingDateId],
+  );
+  useTopic(waiting && waitingDateId ? topics.date(waitingDateId) : null, onDateFrame);
 
   const start = () => {
     if (!matchId || schedule.isPending) return;
@@ -45,7 +65,25 @@ export function StartDatePage() {
         proposedTime: time ? new Date(time).toISOString() : undefined,
         message: task || undefined,
       },
-      { onSuccess: () => navigate(`/conversations/${matchId}`) },
+      {
+        onSuccess: (data) => {
+          const raw = data as {
+            waiting?: boolean;
+            started?: boolean;
+            date_id?: string;
+            dateId?: string;
+          };
+          const dateId = raw.date_id ?? raw.dateId;
+          if (raw.waiting) {
+            setWaitingDateId(dateId);
+            setWaiting(true);
+          } else {
+            navigate(`/conversations/${matchId}`, {
+              state: { ...s, dateId },
+            });
+          }
+        },
+      },
     );
   };
 
@@ -131,15 +169,24 @@ export function StartDatePage() {
           />
         </div>
 
-        {/* Start Date */}
-        <button
-          type="button"
-          onClick={start}
-          disabled={schedule.isPending}
-          className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
-        >
-          Start Date
-        </button>
+        {/* Start Date / Waiting */}
+        {waiting ? (
+          <div className="w-full rounded-[12px] bg-bg shadow-inset py-3 text-center space-y-1">
+            <p className="text-body1 font-bold text-text">상대방을 기다리는 중…</p>
+            <p className="text-caption text-text-muted">
+              상대방이 Start Date를 누르면 대화가 시작됩니다.
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={start}
+            disabled={schedule.isPending}
+            className="w-full rounded-[12px] bg-primary py-3 text-body1 font-bold text-primary-fg disabled:opacity-60"
+          >
+            Start Date
+          </button>
+        )}
       </div>
     </>
   );

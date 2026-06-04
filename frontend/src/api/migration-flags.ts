@@ -28,6 +28,8 @@ export const MIGRATE = {
   dateGet: flag(import.meta.env.VITE_MIGRATE_DATE_GET),
   dateSchedule: flag(import.meta.env.VITE_MIGRATE_DATE_SCHEDULE),
   dateEnd: flag(import.meta.env.VITE_MIGRATE_DATE_END),
+  relationships: flag(import.meta.env.VITE_MIGRATE_RELATIONSHIPS),
+  analytics: flag(import.meta.env.VITE_MIGRATE_ANALYTICS),
 } as const;
 
 export type MigrationFlag = keyof typeof MIGRATE;

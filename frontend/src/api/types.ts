@@ -262,6 +262,8 @@ export type ActiveMatch = {
   compatibilityScore?: number;
   /** Backend match approval status — drives the approve/reject controls. */
   approvalStatus?: "pending" | "approved" | "rejected";
+  /** Latest date ID for this match — used to subscribe to date WS topic. */
+  latestDateId?: string;
 };
 
 export type ActiveMatchesResponse = {
@@ -345,11 +347,12 @@ export type ScheduleDateResponse = {
 };
 
 export type EndDateRequest = {
-  action: "end";
-  outcome: "successful" | "neutral" | "unsuccessful";
+  action?: "end";
+  outcome: "successful" | "neutral" | "unsuccessful" | "completed";
   rating: number;
-  compatibility?: number; // REQ-0307: compatibility 1–5
+  compatibility?: number;
   feedback?: string;
+  ratedAgentId?: string;
 };
 
 // ---- §3.10 Conversation ----

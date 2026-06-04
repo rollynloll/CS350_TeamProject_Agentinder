@@ -97,6 +97,13 @@ export type BeMatch = {
   agent_b_id: string;
   status: string | null;
   created_at: string;
+  latest_date_id: string | null;
+  latest_date_started_at: string | null;
+  latest_date_ended_at: string | null;
+  counterpart_name: string | null;
+  counterpart_avatar: string | null;
+  counterpart_trust_score: number | null;
+  counterpart_tier_badge: string | null;
 };
 
 export type BeMessage = {

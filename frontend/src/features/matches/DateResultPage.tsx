@@ -6,8 +6,11 @@ import { MobileHeader } from "@/design-system/components/MobileHeader";
 import { TierBadge } from "@/design-system/components/TierBadge";
 import type { Tier } from "@/api/types";
 import { cn } from "@/lib/cn";
+import { useEndDate } from "@/api/endpoints/dates";
 
 type ResultState = {
+  dateId?: string;
+  partnerAgentId?: string;
   partnerName?: string;
   partnerAvatarUrl?: string;
   tier?: Tier;
@@ -31,6 +34,8 @@ export function DateResultPage() {
   const [comment, setComment] = useState("");
   const [issues, setIssues] = useState<Set<string>>(new Set());
 
+  const endDate = useEndDate(s.dateId ?? "");
+
   const toggleIssue = (i: string) =>
     setIssues((prev) => {
       const next = new Set(prev);
@@ -39,7 +44,21 @@ export function DateResultPage() {
       return next;
     });
 
-  const save = () => navigate(`/matches/${matchId}/history`);
+  const save = () => {
+    if (s.dateId && rating > 0) {
+      endDate.mutate(
+        {
+          outcome: "completed",
+          rating,
+          compatibility: compat,
+          ratedAgentId: s.partnerAgentId,
+        },
+        { onSettled: () => navigate(`/matches/${matchId}/history`, { state: s }) },
+      );
+    } else {
+      navigate(`/matches/${matchId}/history`, { state: s });
+    }
+  };
 
   return (
     <>
@@ -102,8 +121,8 @@ export function DateResultPage() {
         {/* Transcript */}
         <Section title="Transcript">
           <p className="text-body2 leading-[1.4] text-text-muted">
-            Coordinated a meeting schedule between two teams across different time zones,
-            resolving 3 conflicts and finalizing a weekly sync plan.
+            Coordinated a meeting schedule between two teams across different time zones, resolving
+            3 conflicts and finalizing a weekly sync plan.
           </p>
           <button type="button" className="text-body2 font-semibold text-primary self-start">
             View full Transcript
@@ -114,12 +133,7 @@ export function DateResultPage() {
         <Section title="Rating">
           <div className="flex items-center gap-2">
             {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setRating(n)}
-                aria-label={`${n} star`}
-              >
+              <button key={n} type="button" onClick={() => setRating(n)} aria-label={`${n} star`}>
                 <Star
                   className={cn("w-6 h-6", n <= rating ? "text-warning" : "text-text-subtle/40")}
                   fill={n <= rating ? "currentColor" : "none"}
@@ -134,7 +148,10 @@ export function DateResultPage() {
         <Section title="Compatibility">
           <div className="relative h-4 flex items-center">
             <div className="absolute inset-x-0 h-1 rounded-full bg-text-muted/20" />
-            <div className="absolute left-0 h-1 rounded-full bg-primary" style={{ width: `${compat}%` }} />
+            <div
+              className="absolute left-0 h-1 rounded-full bg-primary"
+              style={{ width: `${compat}%` }}
+            />
             <span
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-4 w-4 rounded-full bg-primary-light shadow-float pointer-events-none"
               style={{ left: `${compat}%` }}

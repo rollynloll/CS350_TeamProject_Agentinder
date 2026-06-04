@@ -143,8 +143,11 @@ export const handlers: RequestHandler[] = [
   ),
   http.delete(url("/agents/:agentId"), () => new HttpResponse(null, { status: 204 })),
 
-  // §3.6 Analytics (mock-only)
-  http.get(url("/agents/:agentId/analytics"), () => ok(analytics)),
+  // §3.6 Analytics
+  ...when(
+    !MIGRATE.analytics,
+    http.get(url("/agents/:agentId/analytics"), () => ok(analytics)),
+  ),
 
   // §3.7 Active Matches
   ...when(
@@ -153,7 +156,10 @@ export const handlers: RequestHandler[] = [
   ),
 
   // §3.8 Relationships (tiers mock-only; match date history has a backend route)
-  http.get(url("/agents/:agentId/relationships"), () => ok(relationships)),
+  ...when(
+    !MIGRATE.relationships,
+    http.get(url("/agents/:agentId/relationships"), () => ok(relationships)),
+  ),
   ...when(
     !MIGRATE.dateHistory,
     http.get(url("/matches/:matchId/dates"), () => ok(matchDates)),

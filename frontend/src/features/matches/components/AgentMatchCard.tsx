@@ -24,36 +24,29 @@ export function AgentMatchCard({
   const navigate = useNavigate();
   const mid = match.matchId;
 
+  const partnerState = {
+    partnerName: match.partnerAgent.displayName,
+    partnerAgentId: match.partnerAgent.agentId,
+    partnerAvatarUrl: match.partnerAgent.avatarUrl,
+    tier: match.tier,
+    myAvatarUrl,
+    dateId: match.latestDateId,
+  };
+
   const view: Cta = {
     label: "Coffee Chatting",
     cta: "View Date",
-    go: () => navigate(`/conversations/${mid}`),
+    go: () => navigate(`/conversations/${mid}`, { state: partnerState }),
   };
   const start: Cta = {
     label: "Awaiting",
     cta: "Start Date",
-    go: () =>
-      navigate(`/matches/${mid}/start`, {
-        state: {
-          partnerName: match.partnerAgent.displayName,
-          partnerAvatarUrl: match.partnerAgent.avatarUrl,
-          tier: match.tier,
-          myAvatarUrl,
-        },
-      }),
+    go: () => navigate(`/matches/${mid}/start`, { state: partnerState }),
   };
   const show: Cta = {
     label: "Done",
     cta: "Show Result",
-    go: () =>
-      navigate(`/matches/${mid}/result`, {
-        state: {
-          partnerName: match.partnerAgent.displayName,
-          partnerAvatarUrl: match.partnerAgent.avatarUrl,
-          tier: match.tier,
-          myAvatarUrl,
-        },
-      }),
+    go: () => navigate(`/matches/${mid}/result`, { state: partnerState }),
   };
   const history: Cta = {
     label: "Unmatched",

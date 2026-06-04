@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from .. import db, deps
 from ..auth.authorization_policy import check_match_participant
 from ..auth.error_handler_middleware import envelope
-from ..deps import get_auth, get_event_bus, get_principal
+from ..deps import get_auth, get_event_bus, get_principal, reconstruct_agent_from_row
 from ..pubsub.domain_events import MessageCreated
 
 router = APIRouter(prefix="/v1/matches", tags=["messages"])
@@ -51,23 +51,19 @@ async def handle_send_message(
     # 사용자 메시지 저장
     await db.insert_message(match_id, sender_agent_id, content)
 
-    # 에이전트 응답 생성 (결정 #3: V1 히스토리 미전달)
-    sender_agent = next((a for a in principal.agents if a.agent_id == sender_agent_id), None)
-    if sender_agent is None and deps.agent_service is not None:
-        try:
-            sender_agent = deps.agent_service.get(sender_agent_id)
-        except KeyError:
-            pass
-    if sender_agent is None:
-        raise KeyError(f"에이전트 인스턴스 없음: {sender_agent_id}")
-
-    # 상대방 에이전트가 응답을 생성한다.
+    # 상대방 에이전트 ID 결정
     counterpart_agent_id = (
         match_row["agent_b_id"] if match_row["agent_a_id"] == sender_agent_id
         else match_row["agent_a_id"]
     )
 
-    response_text = sender_agent.sendMessage(match_id, content)
+    # 상대방 에이전트를 DB에서 로드해 personality 기반 응답 생성
+    counterpart_row = await db.get_agent_full(counterpart_agent_id)
+    if counterpart_row is None:
+        raise KeyError(f"상대방 에이전트를 찾을 수 없습니다: {counterpart_agent_id}")
+    counterpart_agent = reconstruct_agent_from_row(counterpart_row)
+
+    response_text = counterpart_agent.sendMessage(match_id, content)
     resp_msg = await db.insert_message(match_id, counterpart_agent_id, response_text)
 
     bus.publish(MessageCreated(

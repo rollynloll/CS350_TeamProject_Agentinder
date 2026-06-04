@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Menu, Search } from "lucide-react";
 import { useConversation } from "@/api/endpoints/messages";
 import { isValidUUID } from "@/lib/uuid";
@@ -16,8 +16,17 @@ import { ChatInput } from "./components/ChatInput";
 import { ConversationMenuSheet } from "./components/ConversationMenuSheet";
 import { PartnerProfileSheet } from "./components/PartnerProfileSheet";
 
+type ConvState = {
+  dateId?: string;
+  partnerAgentId?: string;
+  partnerName?: string;
+  partnerAvatarUrl?: string;
+};
+
 export function ConversationPage() {
   const { matchId } = useParams<{ matchId: string }>();
+  const navigate = useNavigate();
+  const state = (useLocation().state as ConvState | null) ?? {};
 
   // 실 백엔드 모드에서 URL에 mock ID(mt_seed_001 등)가 남아있으면 /matches로 보낸다.
   if (MIGRATE.messages && !isValidUUID(matchId)) {
@@ -39,6 +48,26 @@ export function ConversationPage() {
     }
   }, []);
   useTopic(matchId ? topics.chat(matchId) : null, onFrame);
+
+  // date 토픽 구독 — date_ended 수신 시 결과 페이지로 이동
+  const onDateFrame = useCallback(
+    (frame: WsFrame) => {
+      const ev = (frame.payload as { event?: string } | undefined)?.event;
+      if (ev === "date_ended") {
+        navigate(`/matches/${matchId}/result`, {
+          state: {
+            dateId: state.dateId,
+            partnerAgentId: state.partnerAgentId,
+            partnerName: state.partnerName,
+            partnerAvatarUrl: state.partnerAvatarUrl,
+          },
+          replace: true,
+        });
+      }
+    },
+    [navigate, matchId, state],
+  );
+  useTopic(state.dateId ? topics.date(state.dateId) : null, onDateFrame);
 
   const handleSend = (text: string) => {
     if (!activeAgentId || !matchId) return;

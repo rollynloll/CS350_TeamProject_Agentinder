@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Home, MessageCircle, Search, Settings as SettingsIcon, UserSquare2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/store/auth";
+import { useSettingsStore } from "@/store/settings";
 import { ensurePrincipal } from "@/api/endpoints/principals";
 import { useMyAgents } from "@/api/endpoints/agents";
 import { wsClient } from "@/api/ws/client";
@@ -61,6 +62,12 @@ export function AuthedLayout() {
             token,
             principalId: p.principal_id,
             activeAgentId: activeAgentId ?? undefined,
+          });
+          // 유저 정보(이메일, 이름)를 settings store에 반영한다.
+          useSettingsStore.getState().updateAccount({
+            email: p.email ?? "",
+            displayName: p.name ?? "",
+            createdAt: p.created_at ?? new Date(0).toISOString(),
           });
         }
       } catch (err) {

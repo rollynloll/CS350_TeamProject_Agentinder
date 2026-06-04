@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { Card, CardBody } from "@/design-system/components/Card";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/store/auth";
+import { ensurePrincipal } from "@/api/endpoints/principals";
 
 /**
  * OAuth(예: GitHub) 콜백 처리 페이지.
@@ -19,14 +20,19 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     let done = false;
-    const finish = (session: Session | null) => {
+    const finish = async (session: Session | null) => {
       if (done || !session) return;
       done = true;
-      setSession({ token: session.access_token, principalId: session.user.id });
+      const email = session.user.email ?? undefined;
+      const name = (session.user.user_metadata?.user_name as string | undefined) ?? undefined;
+      setSession({ token: session.access_token, principalId: session.user.id, email });
+      await ensurePrincipal({ name, email }).catch(() => {});
       navigate("/", { replace: true });
     };
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => finish(session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      void finish(session);
+    });
 
     supabase.auth
       .getSession()
@@ -34,7 +40,7 @@ export function AuthCallbackPage() {
         if (err) {
           setError(err.message);
         } else if (data.session) {
-          finish(data.session);
+          void finish(data.session);
         } else {
           // 코드 교환이 지연되거나 실패할 수 있어, 일정 시간 후에도 세션이 없으면 에러 표시
           window.setTimeout(() => {

@@ -65,7 +65,7 @@ def get_auth(request: Request) -> AuthContext:
     return request.state.auth
 
 
-def _reconstruct_agent_from_row(row: asyncpg.Record) -> Agent:
+def reconstruct_agent_from_row(row: asyncpg.Record) -> Agent:
     """DB 레코드로부터 Agent 도메인 객체를 재구성한다."""
     style_sliders: dict[str, float] = {}
     if row["style_formal"] is not None:
@@ -158,7 +158,7 @@ async def get_principal_by_id(principal_id: UUID) -> Principal:
 
     agent_rows = await db.get_principal_agents_full(principal_id)
     for agent_row in agent_rows:
-        agent = _reconstruct_agent_from_row(agent_row)
+        agent = reconstruct_agent_from_row(agent_row)
         principal._agents[agent.agent_id] = agent
         agent_service._agents[agent.agent_id] = agent
         agent_service._principal_agents.setdefault(principal_id, [])
