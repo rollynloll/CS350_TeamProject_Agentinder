@@ -6,6 +6,42 @@ import { ALL_CAPABILITY_TAGS } from "./ProfileForm";
 import { cn } from "@/lib/cn";
 
 const MAX_TAGS = 10;
+const AVATAR_MAX_DIM = 512; // 축소 후 긴 변 최대 px
+const isImageFile = (file: File): boolean => file.type === "" || file.type.startsWith("image/");
+
+/**
+ * 선택한 이미지를 캔버스로 축소하고 JPEG data URL 로 변환한다.
+ * - iPhone 사진(수 MB HEIC)을 2MB 이하로 줄여 용량 문제를 없앤다.
+ * - HEIC → JPEG 변환으로 REQ-0102 포맷(JPEG/PNG)도 충족한다.
+ * - iOS Safari 는 HEIC 를 디코딩할 수 있어 Image 로딩 → 캔버스 그리기가 동작한다.
+ */
+function resizeImageToJpegDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, AVATAR_MAX_DIM / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("no-2d-context"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image-load-failed"));
+    };
+    img.src = url;
+  });
+}
 
 /**
  * Empty "edit profile" form rendered INLINE in the Profile tab (not an overlay)
@@ -18,6 +54,8 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
   const [localKeys, setLocalKeys] = useState<string[]>([]);
   const keyNames = [...apiKeys.map((k) => k.name), ...localKeys];
   const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [bio, setBio] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [keyName, setKeyName] = useState("");
@@ -29,6 +67,23 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
   const [bold, setBold] = useState(50);
   const [autoMatch, setAutoMatch] = useState(false);
   const [task, setTask] = useState("");
+
+  const onAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setAvatarUrl(null);
+      setAvatarError(null);
+      return;
+    }
+    if (!isImageFile(file)) {
+      setAvatarError("Use an image file.");
+      return;
+    }
+    setAvatarError(null);
+    resizeImageToJpegDataUrl(file)
+      .then((dataUrl) => setAvatarUrl(dataUrl))
+      .catch(() => setAvatarError("Couldn't load that image. Try another."));
+  };
 
   const toggleTag = (tag: string) => {
     setTags((prev) => {
@@ -55,6 +110,9 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
         displayName: name.trim(),
         bio,
         capabilityTags: tags,
+        styleCasual: casual,
+        styleDetail: detail,
+        styleBold: bold,
         interactionStyle: { verbosity: "concise", formality: "casual" },
         availability: { timezone: "UTC", windows: [] },
       },
@@ -66,16 +124,24 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
         <div className="rounded-[24px] bg-bg shadow-float p-4 flex flex-col gap-3">
           <h2 className="text-h3 font-semibold text-text">New profile</h2>
 
-          {/* Avatar placeholder — tap the edit icon to set an image */}
-          <div className="relative h-[200px] w-full rounded-[24px] bg-surface-2 grid place-items-center text-text-subtle">
-            <button
-              type="button"
+          {/* Avatar — tap to open the native picker (JPEG/PNG, ≤2MB); shows a preview. */}
+          <label className="relative h-[200px] w-full rounded-[24px] bg-surface-2 grid place-items-center text-text-subtle cursor-pointer overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="grid place-items-center w-14 h-14 rounded-full bg-bg shadow-float text-text-muted active:scale-95 transition-transform">
+                <ImagePlus className="w-6 h-6" strokeWidth={1.75} />
+              </span>
+            )}
+            <input
+              type="file"
+              accept="image/*"
               aria-label="Edit avatar image"
-              className="grid place-items-center w-14 h-14 rounded-full bg-bg shadow-float text-text-muted active:scale-95 transition-transform"
-            >
-              <ImagePlus className="w-6 h-6" strokeWidth={1.75} />
-            </button>
-          </div>
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              onChange={onAvatarChange}
+            />
+          </label>
+          {avatarError ? <p className="text-body2 text-danger">{avatarError}</p> : null}
 
           <input
             value={name}

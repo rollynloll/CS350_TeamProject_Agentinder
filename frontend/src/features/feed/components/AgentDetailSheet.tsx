@@ -1,7 +1,8 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronDown, Heart, Shield, X } from "lucide-react";
-import type { FeedCard } from "@/api/types";
+import type { FeedCard, Visibility } from "@/api/types";
+import { useAgentProfile } from "@/api/endpoints/agents";
 import { Avatar } from "@/design-system/components/Avatar";
 import { TierBadge } from "@/design-system/components/TierBadge";
 import { cn } from "@/lib/cn";
@@ -26,7 +27,31 @@ export function AgentDetailSheet({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [liked, setLiked] = useState(false);
 
+  // 상세 진입 시 에이전트 프로필을 추가로 불러와, 피드 카드엔 없는 정보(실 bio,
+  // interaction style, 전체 태그, 가용 시간대, 모델)를 채운다. enabled 가 agentId
+  // 유무로 걸려 있어 card 가 null 이면 호출되지 않는다.
+  const profileQuery = useAgentProfile(card?.agentId);
+
   if (!card) return null;
+  const profile = profileQuery.data;
+
+  // 카드(피드)와 프로필(상세 fetch)을 병합 — 프로필이 더 풍부하면 그걸 우선한다.
+  const bioText = profile?.bio || card.bio || card.bioSnippet || "";
+  const tags = profile?.capabilityTags?.length ? profile.capabilityTags : card.topTags;
+  const styleFromProfile =
+    profile != null &&
+    (profile.styleCasual != null || profile.styleDetail != null || profile.styleBold != null)
+      ? {
+          formalCasual: (profile.styleCasual ?? 50) / 100,
+          verboseConcise: (profile.styleDetail ?? 50) / 100,
+          cautiousBold: (profile.styleBold ?? 50) / 100,
+        }
+      : null;
+  const sliders = styleFromProfile ?? card.styleSliders ?? null;
+  const timezone = profile?.availability?.timezone;
+  const baseModel = profile?.baseModel;
+  const visibility = profile?.visibility;
+
   const compat =
     card.compatibilityScore <= 1
       ? Math.round(card.compatibilityScore * 100)
@@ -125,11 +150,11 @@ export function AgentDetailSheet({
               <TrustBreakdownPanel data={card.trustBreakdown} />
             ) : (
               <>
-                <p className="text-body2 leading-[1.4] text-text-muted">
-                  {card.bio ?? card.bioSnippet}
-                </p>
+                {bioText ? (
+                  <p className="text-body2 leading-[1.4] text-text-muted">{bioText}</p>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-1">
-                  {card.topTags.slice(0, 10).map((tag) => (
+                  {tags.slice(0, 10).map((tag) => (
                     <span
                       key={tag}
                       className="inline-flex items-center rounded-[8px] bg-tag px-2 py-1 text-caption font-semibold text-text-muted"
@@ -158,12 +183,24 @@ export function AgentDetailSheet({
             </div>
 
             {/* Interaction Style */}
-            {card.styleSliders ? (
+            {sliders ? (
               <div className="flex flex-col gap-2 pt-1">
                 <p className="text-caption text-text-muted">Interaction Style</p>
-                <StyleSlider left="Formal" right="Casual" value={card.styleSliders.formalCasual} />
-                <StyleSlider left="Verbose" right="Concise" value={card.styleSliders.verboseConcise} />
-                <StyleSlider left="Cautious" right="Bold" value={card.styleSliders.cautiousBold} />
+                <StyleSlider left="Formal" right="Casual" value={sliders.formalCasual} />
+                <StyleSlider left="Verbose" right="Concise" value={sliders.verboseConcise} />
+                <StyleSlider left="Cautious" right="Bold" value={sliders.cautiousBold} />
+              </div>
+            ) : null}
+
+            {/* Details — 프로필에서 받아오는 부가 정보 (모델·가용 시간대·공개 범위) */}
+            {baseModel || timezone || visibility ? (
+              <div className="flex flex-col gap-1.5 pt-1">
+                <p className="text-caption text-text-muted">Details</p>
+                {baseModel ? <DetailRow label="Model" value={baseModel} /> : null}
+                {timezone ? <DetailRow label="Timezone" value={timezone} /> : null}
+                {visibility ? (
+                  <DetailRow label="Visibility" value={VISIBILITY_LABEL[visibility]} />
+                ) : null}
               </div>
             ) : null}
 
@@ -188,6 +225,21 @@ export function AgentDetailSheet({
           </div>
       </Dialog.Content>
     </Dialog.Root>
+  );
+}
+
+const VISIBILITY_LABEL: Record<Visibility, string> = {
+  public: "Public",
+  restricted: "Restricted",
+  hidden: "Hidden",
+};
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-body2">
+      <span className="text-text-muted">{label}</span>
+      <span className="font-semibold text-text truncate max-w-[60%] text-right">{value}</span>
+    </div>
   );
 }
 
