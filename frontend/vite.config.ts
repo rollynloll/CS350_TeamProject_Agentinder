@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
     port: 5173,
     open: false,
     // Dev proxy so the browser can call the real backend same-origin (avoids

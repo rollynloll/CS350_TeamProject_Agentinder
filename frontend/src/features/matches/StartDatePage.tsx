@@ -91,7 +91,7 @@ export function StartDatePage() {
             type="datetime-local"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="w-full rounded-[12px] bg-bg shadow-inset px-3 py-3 text-body1 text-text focus:outline-none [color-scheme:dark]"
+            className="w-full appearance-none rounded-[12px] bg-surface-2 shadow-inset px-3 py-3 min-h-[48px] text-body1 text-text focus:outline-none [color-scheme:dark]"
           />
         </div>
 
