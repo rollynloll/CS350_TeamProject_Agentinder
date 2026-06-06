@@ -88,6 +88,7 @@ class MatchingServiceImpl(IMatchingService):
             skip_trust_check=True,
             topic=None,
             score_manager=self._sm,
+            max_turns_per_agent=8,  # 16턴 × ~1k tokens ≈ 16k tokens/session — TPM 안전 범위
         )
 
     async def runAiMatch(self, agent_id: UUID, topic: str) -> Optional[DateSession]:
@@ -158,6 +159,7 @@ class MatchingServiceImpl(IMatchingService):
             skip_trust_check=False,
             topic=topic,
             score_manager=self._sm,
+            max_turns_per_agent=8,
         )
 
     async def runSelectMatch(
@@ -206,6 +208,7 @@ class MatchingServiceImpl(IMatchingService):
             skip_trust_check=False,
             topic=topic,
             score_manager=self._sm,
+            max_turns_per_agent=8,
         )
 
 

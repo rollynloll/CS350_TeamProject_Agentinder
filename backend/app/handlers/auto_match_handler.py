@@ -20,10 +20,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/agents", tags=["auto-match"])
 
-# OpenAI TPM 한도(30,000 tokens/min) 초과 방지 — 동시 DateSession 수를 제한한다.
-# 세션 1개당 ~2,000 tokens/turn × 20 turns = ~40,000 tokens.
-# 2개 동시 실행 시 ~4,000 tokens/min → 안전 범위.
-_DATE_SEMAPHORE = asyncio.Semaphore(2)
+# _date()는 동기 함수라 이벤트 루프를 차단한다.
+# asyncio.to_thread()로 스레드 풀에 위임해 메인 루프를 해방시킨다.
+# Semaphore(1): 한 번에 1개 세션만 실행 → ScoreManager 스레드 안전 + TPM 보호
+_DATE_SEMAPHORE = asyncio.Semaphore(1)
+
+
+def _run_session_sync(session: DateSession):
+    """DateSession.run()을 새 이벤트 루프에서 실행한다 (스레드 내부용)."""
+    return asyncio.run(session.run())
 
 
 # ── 백그라운드 스케줄러 ────────────────────────────────────────────────────
@@ -75,7 +80,8 @@ async def _run_and_persist(session: DateSession, bus) -> None:
         logger.info("date 시작 (세마포어 획득): date=%s", session.date_id)
         try:
             bus.publish(DateStarted(date_id=session.date_id, match_id=session.match_id))
-            result = await session.run()
+            # to_thread: _date()의 동기 LLM 호출이 메인 이벤트 루프를 차단하지 않도록
+            result = await asyncio.to_thread(_run_session_sync, session)
 
             # ── 1. 대화 내용 저장 ────────────────────────────────────────
             # transcript role: "assistant" → agent_a, "user" → agent_b
@@ -130,9 +136,6 @@ async def _run_and_persist(session: DateSession, bus) -> None:
                     avg_rating=rel.avg_rating or 0.0,
                     tier=(new_tier or rel.tier).value,
                 )
-                if new_tier is not None:
-                    await db.update_agent_tier(agent_a_id, new_tier.value)
-                    await db.update_agent_tier(agent_b_id, new_tier.value)
 
             bus.publish(DateEnded(
                 date_id=session.date_id,

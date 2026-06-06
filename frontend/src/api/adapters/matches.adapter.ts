@@ -15,7 +15,10 @@ function partnerIdOf(m: BeMatch, viewer: AgentId): AgentId {
 function deriveDateStatus(m: BeMatch): ActiveMatch["dateStatus"] {
   if (!m.latest_date_id) return "idle";
   if (m.latest_date_started_at && !m.latest_date_ended_at) return "coffee_chatting";
-  if (m.latest_date_ended_at) return "deep_diving";
+  if (m.latest_date_ended_at) {
+    // 레이팅이 저장된 후에야 완전히 완료된 것으로 표시
+    return m.latest_date_has_rating ? "deep_diving" : "rating_pending";
+  }
   return "idle";
 }
 
