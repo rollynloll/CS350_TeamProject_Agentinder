@@ -95,11 +95,13 @@ export function ConversationPage() {
         // Date kinds were unified into a single "Date".
         const pillLabel = "Date";
         const merged: ChatMessage[] = [...data.messages, ...live];
+        const partnerName = state.partnerName || data.matchInfo.partnerAgent.displayName;
+        const partnerAgentId = state.partnerAgentId || data.matchInfo.partnerAgent.agentId;
         return (
           <>
             <MobileHeader
               showBack
-              title={data.matchInfo.partnerAgent.displayName}
+              title={partnerName}
               action={
                 <>
                   <span className="rounded-full bg-surface px-3 py-1 text-body2 font-semibold text-text shadow-card">
@@ -144,7 +146,7 @@ export function ConversationPage() {
             <ConversationMenuSheet
               open={menuOpen}
               onOpenChange={setMenuOpen}
-              partnerAgentId={data.matchInfo.partnerAgent.agentId}
+              partnerAgentId={partnerAgentId}
               task={data.matchInfo.task}
               onViewProfile={() => {
                 setMenuOpen(false);
@@ -152,7 +154,7 @@ export function ConversationPage() {
               }}
             />
             <PartnerProfileSheet
-              agentId={data.matchInfo.partnerAgent.agentId}
+              agentId={partnerAgentId}
               open={profileOpen}
               onOpenChange={setProfileOpen}
             />

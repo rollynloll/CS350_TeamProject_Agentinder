@@ -85,6 +85,8 @@ CREATE TABLE agent_profiles (
     style_vector        jsonb            NOT NULL DEFAULT '{}',
     capability_embedding vector(1536),                  -- NULL until async job completes
     available_timezones text[]           NOT NULL DEFAULT '{}',
+    auto_match          boolean          NOT NULL DEFAULT false,
+    task_description    text             NOT NULL DEFAULT '',
     updated_at          timestamptz      NOT NULL DEFAULT now(),
 
     CONSTRAINT pk_agent_profiles   PRIMARY KEY (agent_id),

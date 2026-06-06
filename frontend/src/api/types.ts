@@ -190,6 +190,10 @@ export type AgentProfile = {
   styleDetail?: number;
   /** Mock-only — 0–100 sliders. */
   styleBold?: number;
+  /** Auto-match 활성 여부. Mock-only until backend lands. */
+  autoMatch?: boolean;
+  /** Auto-match 태스크 설명. */
+  taskDescription?: string;
 };
 
 export type AgentCreateRequest = {
@@ -202,6 +206,8 @@ export type AgentCreateRequest = {
   styleDetail?: number;
   styleBold?: number;
   availability: AgentProfile["availability"];
+  autoMatch?: boolean;
+  taskDescription?: string;
 };
 
 export type AgentUpdateRequest = Partial<

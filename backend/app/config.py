@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str
     openai_api_key: str = ""
     app_env: str = "development"
+    auto_match_interval_seconds: int = 300  # 자율 스와이프 루프 주기 (기본 5분)
 
 
 settings = Settings()

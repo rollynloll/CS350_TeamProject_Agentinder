@@ -64,6 +64,8 @@ export function mapAgentProfile(be: BeAgentProfile, base?: Partial<AgentProfile>
     visibility: normalizeVisibility(be.visibility),
     createdAt: base?.createdAt ?? nowIso(),
     updatedAt: nowIso(),
+    autoMatch: be.auto_match ?? base?.autoMatch ?? false,
+    taskDescription: be.task_description ?? base?.taskDescription ?? "",
   };
 }
 
@@ -90,6 +92,8 @@ export function mapCreateRequest(req: AgentCreateRequest): BeCreateAgentRequest 
     personality: { surface: { bio: req.bio, style_sliders: styleSlidersFrom(req) } },
     llm_model: "gpt-4o",
     avatar: "",
+    auto_match: req.autoMatch ?? false,
+    task_description: req.taskDescription ?? "",
   };
 }
 
@@ -113,6 +117,8 @@ export function mapCreateResponse(
     createdAt: nowIso(),
     updatedAt: nowIso(),
     apiKeyMasked: be.api_key,
+    autoMatch: req?.autoMatch ?? false,
+    taskDescription: req?.taskDescription ?? "",
   };
 }
 
@@ -127,6 +133,8 @@ export function mapUpdateRequest(req: AgentUpdateRequest): BeUpdateAgentRequest 
   if (req.bio !== undefined || hasStyle) {
     out.personality = { surface: { bio: req.bio ?? "", style_sliders: styleSlidersFrom(req) } };
   }
+  if (req.autoMatch !== undefined) out.auto_match = req.autoMatch;
+  if (req.taskDescription !== undefined) out.task_description = req.taskDescription;
   return out;
 }
 

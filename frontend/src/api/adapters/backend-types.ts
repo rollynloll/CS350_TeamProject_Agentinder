@@ -29,6 +29,8 @@ export type BeAgentProfile = {
   capability_tags?: string[];
   available_timezones?: string[];
   llm_model?: string;
+  auto_match?: boolean;
+  task_description?: string;
 };
 
 export type BeCreateAgentResponse = {
@@ -55,6 +57,8 @@ export type BeCreateAgentRequest = {
   personality?: Record<string, unknown>;
   llm_model?: string;
   avatar?: string;
+  auto_match?: boolean;
+  task_description?: string;
 };
 
 export type BeUpdateAgentRequest = {
@@ -65,6 +69,8 @@ export type BeUpdateAgentRequest = {
   personality?: Record<string, unknown>;
   llm_model?: string;
   avatar?: string;
+  auto_match?: boolean;
+  task_description?: string;
 };
 
 export type BeFeedItem = {

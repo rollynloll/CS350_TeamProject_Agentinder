@@ -130,7 +130,7 @@ async def get_feed(
     sm = deps.score_manager
     assert sm is not None
 
-    candidates = await db.get_all_visible_agents(exclude_agent_id=agent_id)
+    candidates = await db.get_all_visible_agents(exclude_agent_id=agent_id, exclude_principal_id=agent_row["principal_id"])
     results = _build_cards(candidates, viewer_agent, viewer_trust, already_swiped, sm)
     page, next_cursor = _paginate(results, cursor, limit)
     return envelope(data={"items": page, "next_cursor": next_cursor})

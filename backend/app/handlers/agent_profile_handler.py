@@ -21,6 +21,8 @@ class CreateAgentRequest(BaseModel):
     personality: dict = {}
     llm_model: str = "gpt-4o"
     avatar: str = ""
+    auto_match: bool = False
+    task_description: str = ""
 
 
 class UpdateAgentRequest(BaseModel):
@@ -31,6 +33,8 @@ class UpdateAgentRequest(BaseModel):
     personality: dict | None = None
     llm_model: str | None = None
     avatar: str | None = None
+    auto_match: bool | None = None
+    task_description: str | None = None
 
 
 def _personality_to_db(personality) -> dict:
@@ -71,6 +75,8 @@ async def create_agent(body: CreateAgentRequest, principal=Depends(get_principal
         style_vector=profile.style_vector,
         available_timezones=profile.available_timezones,
         api_key_hash=hashlib.sha256(api_key.encode()).hexdigest(),
+        auto_match=body.auto_match,
+        task_description=body.task_description,
         **pf,
     )
     if profile.capability_tags:
@@ -83,6 +89,8 @@ async def create_agent(body: CreateAgentRequest, principal=Depends(get_principal
         "display_name": profile.display_name,
         "visibility": vis,
         "tier_badge": profile.tier_badge,
+        "auto_match": body.auto_match,
+        "task_description": body.task_description,
     })
 
 
@@ -114,6 +122,9 @@ async def update_agent(
     vis = profile.visibility.value if hasattr(profile.visibility, "value") else str(profile.visibility)
     pf = _personality_to_db(personality)
 
+    resolved_auto_match = body.auto_match if body.auto_match is not None else bool(row.get("auto_match", False))
+    resolved_task_description = body.task_description if body.task_description is not None else (row.get("task_description") or "")
+
     await db.upsert_agent_profile_row(
         agent_id=agent.agent_id,
         display_name=profile.display_name,
@@ -122,6 +133,8 @@ async def update_agent(
         llm_model=body.llm_model or row["llm_model"] or "gpt-4o",
         style_vector=profile.style_vector,
         available_timezones=profile.available_timezones,
+        auto_match=resolved_auto_match,
+        task_description=resolved_task_description,
         **pf,
     )
     if body.capability_tags is not None:
@@ -132,6 +145,8 @@ async def update_agent(
         "display_name": profile.display_name,
         "visibility": vis,
         "tier_badge": profile.tier_badge,
+        "auto_match": resolved_auto_match,
+        "task_description": resolved_task_description,
     })
 
 

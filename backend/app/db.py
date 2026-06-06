@@ -208,6 +208,7 @@ async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
         "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
         " ap.style_vector, ap.available_timezones, ap.llm_model,"
+        " ap.auto_match, ap.task_description,"
         " ap.capability_embedding IS NOT NULL AS has_embedding,"
         " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold,"
         " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
@@ -219,25 +220,46 @@ async def get_agent_row(agent_id: UUID) -> asyncpg.Record | None:
         " WHERE a.agent_id = $1"
         " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
-        " ap.style_vector, ap.available_timezones, ap.llm_model, ap.capability_embedding,"
+        " ap.style_vector, ap.available_timezones, ap.llm_model,"
+        " ap.auto_match, ap.task_description, ap.capability_embedding,"
         " aper.bio, aper.style_formal, aper.style_verbose, aper.style_bold",
         agent_id,
     )
 
 
-async def get_all_visible_agents(exclude_agent_id: UUID) -> list[asyncpg.Record]:
+async def get_all_visible_agents(exclude_agent_id: UUID, exclude_principal_id: UUID) -> list[asyncpg.Record]:
     return await get_pool().fetch(
         "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
         " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
-        " ap.style_vector,"
+        " ap.style_vector, ap.auto_match, ap.task_description,"
         " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
         " FROM agents a JOIN agent_profiles ap USING (agent_id)"
         " LEFT JOIN agent_capability_tags act USING (agent_id)"
         " LEFT JOIN capability_vocabulary cv USING (tag_id)"
-        " WHERE a.agent_id != $1 AND ap.is_suspended = false AND ap.visibility != 'hidden'"
+        " WHERE a.agent_id != $1 AND a.principal_id != $2"
+        " AND ap.is_suspended = false AND ap.visibility != 'hidden'"
         " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
-        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url, ap.style_vector",
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.auto_match, ap.task_description",
         exclude_agent_id,
+        exclude_principal_id,
+    )
+
+
+async def get_auto_match_agents() -> list[asyncpg.Record]:
+    """auto_match=true인 활성 에이전트 목록 반환 (자율 스와이프 엔진용)."""
+    return await get_pool().fetch(
+        "SELECT a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.auto_match, ap.task_description,"
+        " COALESCE(array_agg(cv.name) FILTER (WHERE cv.name IS NOT NULL), '{}') AS capability_tags"
+        " FROM agents a JOIN agent_profiles ap USING (agent_id)"
+        " LEFT JOIN agent_capability_tags act USING (agent_id)"
+        " LEFT JOIN capability_vocabulary cv USING (tag_id)"
+        " WHERE ap.auto_match = true AND ap.is_suspended = false AND ap.visibility != 'hidden'"
+        " GROUP BY a.agent_id, a.principal_id, ap.display_name, ap.visibility,"
+        " ap.trust_score, ap.tier_badge, ap.date_count, ap.avatar_url,"
+        " ap.style_vector, ap.auto_match, ap.task_description",
     )
 
 
@@ -451,6 +473,8 @@ async def insert_agent_full(
     domain_interest: str | None,
     system_prompt_cache: str,
     api_key_hash: str,
+    auto_match: bool = False,
+    task_description: str = "",
 ) -> None:
     """에이전트 생성 시 agents, agent_profiles, agent_personalities, agent_credentials에 트랜잭션으로 삽입."""
     pool = get_pool()
@@ -463,10 +487,11 @@ async def insert_agent_full(
             await conn.execute(
                 "INSERT INTO agent_profiles"
                 " (agent_id, display_name, avatar_url, visibility, llm_model,"
-                "  style_vector, available_timezones)"
-                " VALUES ($1, $2, $3, $4::visibility_enum, $5, $6::jsonb, $7)",
+                "  style_vector, available_timezones, auto_match, task_description)"
+                " VALUES ($1, $2, $3, $4::visibility_enum, $5, $6::jsonb, $7, $8, $9)",
                 agent_id, display_name, avatar_url or None, visibility.lower(),
                 llm_model, _json.dumps(style_vector), available_timezones,
+                auto_match, task_description,
             )
             await conn.execute(
                 "INSERT INTO agent_personalities"
@@ -502,6 +527,8 @@ async def upsert_agent_profile_row(
     collaboration_goal: str | None,
     domain_interest: str | None,
     system_prompt_cache: str,
+    auto_match: bool = False,
+    task_description: str = "",
 ) -> None:
     """에이전트 수정 시 agent_profiles + agent_personalities를 트랜잭션으로 갱신."""
     pool = get_pool()
@@ -510,10 +537,12 @@ async def upsert_agent_profile_row(
             await conn.execute(
                 "UPDATE agent_profiles"
                 " SET display_name=$2, avatar_url=$3, visibility=$4::visibility_enum,"
-                "     llm_model=$5, style_vector=$6::jsonb, available_timezones=$7, updated_at=now()"
+                "     llm_model=$5, style_vector=$6::jsonb, available_timezones=$7,"
+                "     auto_match=$8, task_description=$9, updated_at=now()"
                 " WHERE agent_id=$1",
                 agent_id, display_name, avatar_url or None, visibility.lower(),
                 llm_model, _json.dumps(style_vector), available_timezones,
+                auto_match, task_description,
             )
             await conn.execute(
                 "UPDATE agent_personalities"

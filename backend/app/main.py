@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
@@ -15,6 +16,7 @@ from .handlers import (
     agent_profile_handler,
     analytics_handler,
     auth_handler,
+    auto_match_handler,
     date_handler,
     feed_handler,
     match_handler,
@@ -32,7 +34,12 @@ async def lifespan(app: FastAPI):
         os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
     await db.init_pool()
     init_singletons()
+    _auto_match_task = asyncio.create_task(
+        auto_match_handler.run_background_loop(settings.auto_match_interval_seconds)
+    )
     yield
+    _auto_match_task.cancel()
+    await asyncio.gather(_auto_match_task, return_exceptions=True)
     await db.close_pool()
 
 
@@ -56,6 +63,7 @@ app.include_router(auth_handler.router)
 app.include_router(analytics_handler.router)
 app.include_router(principal_handler.router)
 app.include_router(agent_profile_handler.router)
+app.include_router(auto_match_handler.router)
 app.include_router(feed_handler.router)
 app.include_router(match_handler.router)
 app.include_router(message_handler.router)

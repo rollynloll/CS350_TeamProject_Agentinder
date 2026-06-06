@@ -57,10 +57,23 @@ function Editor({ profile }: { profile: AgentProfile }) {
     setCasual(profile.styleCasual ?? 50);
     setDetail(profile.styleDetail ?? 50);
     setBold(profile.styleBold ?? 50);
-  }, [profile.agentId, profile.bio, profile.capabilityTags, profile.styleCasual, profile.styleDetail, profile.styleBold]);
+    setAutoMatch(profile.autoMatch ?? false);
+    setTask(profile.taskDescription ?? "");
+  }, [
+    profile.agentId,
+    profile.bio,
+    profile.capabilityTags,
+    profile.styleCasual,
+    profile.styleDetail,
+    profile.styleBold,
+    profile.autoMatch,
+    profile.taskDescription,
+  ]);
 
   const save = () =>
-    update.mutate({ bio, capabilityTags: tags } as Parameters<typeof update.mutate>[0]);
+    update.mutate({ bio, capabilityTags: tags, autoMatch, taskDescription: task } as Parameters<
+      typeof update.mutate
+    >[0]);
 
   const toggleTag = (tag: string) => {
     setTags((prev) => {
