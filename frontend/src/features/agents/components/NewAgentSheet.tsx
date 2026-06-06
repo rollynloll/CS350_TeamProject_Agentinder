@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, ImagePlus } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { useCreateAgent } from "@/api/endpoints/agents";
 import { useSettingsStore } from "@/store/settings";
-import { ALL_CAPABILITY_TAGS } from "./ProfileForm";
 import { cn } from "@/lib/cn";
 
 const MAX_TAGS = 10;
