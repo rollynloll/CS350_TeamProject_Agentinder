@@ -114,8 +114,9 @@ def reconstruct_agent_from_row(row: asyncpg.Record) -> Agent:
         date_count=row["date_count"],
     )
 
-    llm_model = row["llm_model"] if "llm_model" in row.keys() else "gpt-4o"
-    llm_client = LLMClient(model=llm_model or "gpt-4o")
+    llm_model = row["llm_model"] if "llm_model" in row.keys() else None
+    # gpt-4o-mini: TPM 한도 200k (gpt-4o는 30k — 40턴 세션이 단일 세션에서도 초과)
+    llm_client = LLMClient(model=llm_model or "gpt-4o-mini")
 
     agent = Agent(
         agent_id=row["agent_id"],

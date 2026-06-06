@@ -106,6 +106,7 @@ export type BeMatch = {
   latest_date_id: string | null;
   latest_date_started_at: string | null;
   latest_date_ended_at: string | null;
+  latest_date_has_rating: boolean | null;
   counterpart_name: string | null;
   counterpart_avatar: string | null;
   counterpart_trust_score: number | null;

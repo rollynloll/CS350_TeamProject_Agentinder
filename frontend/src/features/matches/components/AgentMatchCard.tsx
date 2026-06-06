@@ -49,6 +49,11 @@ export function AgentMatchCard({
     cta: "Show Result",
     go: () => navigate(`/matches/${mid}/result`, { state: partnerState }),
   };
+  const ratingPending: Cta = {
+    label: "Rating...",
+    cta: "Show Result",
+    go: () => navigate(`/matches/${mid}/result`, { state: partnerState }),
+  };
   const history: Cta = {
     label: "Unmatched",
     cta: "View History",
@@ -62,7 +67,9 @@ export function AgentMatchCard({
         ? view
         : match.dateStatus === "deep_diving"
           ? show
-          : start;
+          : match.dateStatus === "rating_pending"
+            ? ratingPending
+            : start;
 
   return (
     <div className="relative">

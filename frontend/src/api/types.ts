@@ -154,7 +154,7 @@ export type AgentListItem = {
   /** Mock-only — pending API spec extension. */
   capabilityTags?: string[];
   /** Mock-only — pending API spec extension. */
-  dateStatus?: "coffee_chatting" | "deep_diving" | "idle";
+  dateStatus?: "coffee_chatting" | "deep_diving" | "rating_pending" | "idle";
 };
 
 export type AgentListResponse = { agents: AgentListItem[] };
@@ -257,7 +257,7 @@ export type ActiveMatch = {
   matchId: MatchId;
   partnerAgent: PartnerAgent;
   tier: Tier;
-  dateStatus: "coffee_chatting" | "deep_diving" | "idle";
+  dateStatus: "coffee_chatting" | "deep_diving" | "rating_pending" | "idle";
   /** How the match was formed — drives the "Dating(Auto)" label. */
   matchType: "auto" | "manual";
   /** Task the current date is about — shown on the Date Result screen. */

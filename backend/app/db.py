@@ -90,7 +90,8 @@ async def get_matches_for_agent(agent_id: UUID, status: str | None = None) -> li
         " ap.tier_badge AS counterpart_tier_badge, ap.trust_score AS counterpart_trust_score,"
         " ld.date_id AS latest_date_id,"
         " ld.started_at AS latest_date_started_at,"
-        " ld.ended_at AS latest_date_ended_at"
+        " ld.ended_at AS latest_date_ended_at,"
+        " EXISTS (SELECT 1 FROM ratings r WHERE r.date_id = ld.date_id) AS latest_date_has_rating"
         " FROM matches m"
         " JOIN agent_profiles ap"
         "   ON ap.agent_id = CASE WHEN m.agent_a_id = $1 THEN m.agent_b_id ELSE m.agent_a_id END"
@@ -646,6 +647,18 @@ async def update_agent_tier(agent_id: UUID, tier: str) -> None:
     )
 
 
+async def insert_date_with_id(
+    date_id: UUID,
+    match_id: UUID,
+    date_type: str | None = None,
+) -> asyncpg.Record:
+    """DateSession이 내부적으로 생성한 date_id를 그대로 DB에 삽입한다."""
+    return await get_pool().fetchrow(
+        "INSERT INTO dates (date_id, match_id, type) VALUES ($1, $2, $3) RETURNING *",
+        date_id, match_id, date_type,
+    )
+
+
 async def get_relationships_for_agent(agent_id: UUID) -> list[asyncpg.Record]:
     return await get_pool().fetch(
         "SELECT r.*,"
@@ -672,7 +685,7 @@ async def get_analytics_date_stats(agent_id: UUID, since_dt) -> asyncpg.Record |
     return await get_pool().fetchrow(
         "SELECT"
         " COUNT(*) FILTER (WHERE d.ended_at IS NOT NULL) AS total_dates,"
-        " COUNT(*) FILTER (WHERE d.outcome = 'completed') AS successful_dates,"
+        " COUNT(*) FILTER (WHERE d.outcome = 'successful') AS successful_dates,"
         " ROUND(AVG(r.stars)::numeric, 2) AS avg_stars,"
         " COUNT(*) FILTER (WHERE d.type = 'coffee_chat') AS coffee_chat_count,"
         " COUNT(*) FILTER (WHERE d.type = 'deep_dive') AS deep_dive_count,"

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
+import re
+import time
 from typing import TYPE_CHECKING, List, Optional
 
 from ..types import Message
@@ -113,17 +115,32 @@ class LLMClient:
             )
             return "[stub response: OPENAI_API_KEY not configured]"
 
-        try:
-            import openai  # type: ignore
-            oai_messages = [{"role": m.role, "content": m.content} for m in messages]
-            completion = self._openai_client.chat.completions.create(
-                model=self.model,
-                messages=oai_messages,
-            )
-            return completion.choices[0].message.content or ""
-        except Exception as exc:
-            logger.error("LLM call failed: %s", exc)
-            raise
+        import openai  # type: ignore
+
+        oai_messages = [{"role": m.role, "content": m.content} for m in messages]
+        max_retries = 10
+        for attempt in range(max_retries):
+            try:
+                completion = self._openai_client.chat.completions.create(
+                    model=self.model,
+                    messages=oai_messages,
+                )
+                return completion.choices[0].message.content or ""
+            except openai.RateLimitError as exc:
+                if attempt >= max_retries - 1:
+                    logger.error("LLM call failed after %d retries: %s", max_retries, exc)
+                    raise
+                # 에러 메시지에서 권장 대기 시간 파싱, 없으면 5초 기본값
+                m = re.search(r"try again in (\d+\.?\d*)s", str(exc))
+                wait = float(m.group(1)) + 0.5 if m else 5.0
+                logger.warning(
+                    "429 rate limit (시도 %d/%d) — %.1fs 후 재시도",
+                    attempt + 1, max_retries, wait,
+                )
+                time.sleep(wait)
+            except Exception as exc:
+                logger.error("LLM call failed: %s", exc)
+                raise
 
     def _check_call(self, prompt: str) -> str:
         """Single-message LLM call used by PersonalityConsistencyManager.check()."""
