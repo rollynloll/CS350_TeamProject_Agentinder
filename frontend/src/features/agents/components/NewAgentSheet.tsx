@@ -66,6 +66,13 @@ export function NewAgentForm({ onClose }: { onClose: () => void }) {
   const [bold, setBold] = useState(50);
   const [autoMatch, setAutoMatch] = useState(false);
   const [task, setTask] = useState("");
+  const [adding, setAdding] = useState("");
+
+  const addTag = () => {
+    const t = adding.trim();
+    if (t && !tags.includes(t) && tags.length < MAX_TAGS) setTags((prev) => [...prev, t]);
+    setAdding("");
+  };
 
   const onAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
