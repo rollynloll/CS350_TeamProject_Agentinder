@@ -103,7 +103,7 @@ class DateSession:
     # Public
     # ------------------------------------------------------------------
 
-    def run(self) -> DateResult:
+    async def run(self) -> DateResult:
         if not self._handshake():
             return DateResult(
                 outcome=DateOutcome.UNSUCCESSFUL,
