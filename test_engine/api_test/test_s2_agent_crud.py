@@ -2,13 +2,17 @@
 S2: 에이전트 CRUD
 Guide: 시나리오 2 (2-1 ~ 2-5)
 
+동적 자격증명: 실행마다 신규 UUID (principal 에이전트 누적 방지)
+  JWT_A = make_jwt(uuid4(), f"a-{_RUN_ID}@test.local")
+  JWT_B = make_jwt(uuid4(), f"b-{_RUN_ID}@test.local")
+
 Setup  POST /v1/principals (JWT_A)        → Principal A 멱등 생성
-2-1    POST /v1/agents                    → 200 agent_id·api_key·tier_badge=new_agent
-2-2    GET  /v1/agents/{id}               → 200 프로필 필드 검증
-2-3    PATCH /v1/agents/{id}              → 200 display_name 업데이트 확인
+2-1    POST /v1/agents                    → 200 agent_id·api_key·visibility=PUBLIC·tier_badge=new_agent
+2-2    GET  /v1/agents/{id}               → 200 display_name·tier_badge·bio·capability_tags(3개)
+2-3    PATCH /v1/agents/{id}              → 200 display_name·visibility(restricted) 업데이트 확인
 2-5    PATCH /v1/agents/{id} (JWT_B)      → 403 FORBIDDEN (타인 에이전트)
 
-Skip: 2-4 (Free tier 5개 초과) — 에이전트 5개 사전 생성 필요, 별도 환경에서 수동 검증
+Skip: 2-4 (Free tier 5개 초과) — 에이전트 5개 사전 생성 필요, 수동 검증
 """
 from __future__ import annotations
 import sys, os

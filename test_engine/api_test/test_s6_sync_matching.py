@@ -1,18 +1,19 @@
 """
 S6: 동기 매칭 — 유저 주도
-Guide: 시나리오 6 (6-1, 6-2)
+Guide: 시나리오 6 (6-1, 6-1b, 6-2)
 
-Setup  Principal A: AgentA (coding,research,analysis,design,testing)
-       Principal B: AgentC (coding,research,design)  ← A와 3개 공통 → 높은 Cap
+Setup  Principal A: AgentA (coding,research,analysis,design,testing) — 실행마다 신규 UUID
+       Principal B: AgentC (coding,research,design)  ← A와 3개 공통 → Cap=0.6
                     AgentD (writing,management)       ← A와 0개 공통 → Cap=0
 
-6-1    GET /v1/agents/{A}/feed → items 내림차순 정렬 검증 (AgentC > AgentD)
-         호환성 공식 (new_agent):
-           A vs C: Cap=|{coding,research,design}|/|{coding,research,analysis,design,testing}|=3/5=0.6
-           A vs D: Cap=0/7=0
-           → C가 D보다 먼저 출력되어야 함
+6-1    GET /v1/agents/{A}/feed?limit=50  → 호환성 내림차순 정렬·AgentC > AgentD 검증
+         A vs C: Cap=3/5=0.60  A vs D: Cap=0/7=0.00
 
-6-2    A→C 스와이프 right → C→A 스와이프 right → 매치 생성 → 승인 → 데이트 제안
+6-1b   GET /v1/agents/{A}/discover?capability=coding  → capability AND 필터 검증
+         AgentC(coding 보유) 포함·AgentD(writing,management) 미포함
+         applied_filters 응답 필드 확인
+
+6-2    A→C right → C→A right → 매치 생성 → 승인 → 데이트 제안
        (시나리오 3-2 ~ 3-5와 동일 흐름)
 """
 from __future__ import annotations
@@ -165,6 +166,55 @@ def test_6_1_feed_sorted(state: dict) -> bool:
     return ok
 
 
+# ── 6-1b ─────────────────────────────────────────────────────────────────────
+
+def test_6_1b_discover(state: dict) -> bool:
+    """
+    GET /v1/agents/{A}/discover?capability=coding
+    capability 필터는 AND 매칭 → coding 태그를 보유한 에이전트만 반환
+
+    AgentC (coding,research,design)  → 포함되어야 함
+    AgentD (writing,management)      → 미포함 (coding 없음)
+    응답: items·next_cursor·applied_filters
+    """
+    agent_a_id = state.get("agent_a_id")
+    agent_c_id = state.get("agent_c_id")
+    agent_d_id = state.get("agent_d_id")
+    if not agent_a_id:
+        return _fail("6-1b SKIP (no agent_a_id)")
+
+    resp = api_get(f"/v1/agents/{agent_a_id}/discover?capability=coding", JWT_A)
+    ok = check_status("6-1b discover", resp, 200)
+    if not ok:
+        return False
+
+    data  = resp.json().get("data", {})
+    items = data.get("items", [])
+    ok &= check_truthy("6-1b items not empty", len(items) > 0)
+
+    ids = [i.get("agent_id") for i in items]
+
+    # AgentC: coding 보유 → 포함
+    if agent_c_id in ids:
+        c_compat = next((i.get("compatibility_total") for i in items if i.get("agent_id") == agent_c_id), None)
+        _ok(f"6-1b AgentC in discover (compat={c_compat})")
+    else:
+        ok = _fail("6-1b AgentC not in discover (should have coding tag)")
+
+    # AgentD: writing,management 보유, coding 없음 → 미포함
+    if agent_d_id not in ids:
+        _ok("6-1b AgentD excluded by capability=coding filter")
+    else:
+        ok = _fail("6-1b AgentD in discover (should be filtered out)")
+
+    # applied_filters 필드 확인
+    applied = data.get("applied_filters", {})
+    ok &= check_truthy("6-1b applied_filters present", applied is not None)
+    print(f"  INFO  6-1b applied_filters={applied}")
+
+    return ok
+
+
 # ── 6-2 ──────────────────────────────────────────────────────────────────────
 
 def test_6_2_swipe_match_date(state: dict) -> bool:
@@ -220,8 +270,9 @@ def main() -> int:
         return 1
 
     tests = [
-        ("6-1 feed sorted",        test_6_1_feed_sorted),
-        ("6-2 swipe→match→date",   test_6_2_swipe_match_date),
+        ("6-1 feed sorted",              test_6_1_feed_sorted),
+        ("6-1b discover capability",     test_6_1b_discover),
+        ("6-2 swipe→match→date",         test_6_2_swipe_match_date),
     ]
     _, f = run_suite(SUITE_ID, tests, state)
     return f

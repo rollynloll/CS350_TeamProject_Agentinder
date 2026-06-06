@@ -2,13 +2,16 @@
 S4: 랭킹 시스템 — Trust Score
 Guide: 시나리오 4 (4-1)
 
-Setup  Principal A·B + Agent A·B 생성 (S3 setup과 동일)
+동적 자격증명: 실행마다 신규 UUID (principal 에이전트 누적 방지)
+Setup  Principal A·B + 신규 Agent B(BetaBot-{RUN_ID}) 생성
+
 4-1    GET /v1/agents/{B_ID}    → trust_score=null, tier_badge=new_agent, date_count=0
+         Ground truth: date_count < 5 → new_agent 배지·trust_score null
 
 Skip (API 미구현):
-  4-2  Trust Score 재계산       — trust_data_points DB 직접 확인
-  4-3  New Agent 배지 전환      — agent_profiles DB 직접 확인
-  4-4  가중치 검증              — ScoreManager 단위 테스트(functional/)에서 검증
+  4-2  Trust Score 재계산       — trust_data_points 테이블 DB 직접 확인
+  4-3  New Agent 배지 전환      — agent_profiles.tier_badge DB 직접 확인
+  4-4  가중치 검증              — test_engine/functional/test_req_0401.py 에서 검증
 """
 from __future__ import annotations
 import sys, os

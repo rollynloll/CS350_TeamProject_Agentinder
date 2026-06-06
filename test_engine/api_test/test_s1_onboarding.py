@@ -2,9 +2,12 @@
 S1: Onboarding — Principal 계정 생성
 Guide: 시나리오 1 (1-1 ~ 1-5)
 
+고정 자격증명: helpers.py의 PRINCIPAL_A_ID·JWT_A 사용 (실행 간 불변)
+
 1-1  GET  /healthz                        → 200 {"status": "ok"}
-1-2  POST /v1/principals                  → 200 principal_id, plan=FREE (멱등)
-1-3  GET  /v1/agents                      → 200 data=list
+1-2  POST /v1/principals                  → 200 principal_id·email(존재 확인)·plan=FREE
+                                             멱등 엔드포인트 — 기존 레코드 반환 시 email 값 다를 수 있음
+1-3  GET  /v1/agents                      → 200 data=list (신규 계정이면 빈 배열)
 1-4  GET  /v1/agents (invalid token)      → 401 UNAUTHORIZED
 1-5  GET  /v1/agents (no token)           → 401 UNAUTHORIZED
 """

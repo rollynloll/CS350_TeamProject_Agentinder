@@ -2,13 +2,19 @@
 S7: 동기 매칭 — AI 주도
 Guide: 시나리오 7
 
-V1 구현 상태: 자동 에이전트 선정 엔드포인트 미구현.
-현재 가능한 검증: feed?limit=1 으로 최적 후보 1명 조회.
+V1 구현 상태: 자동 선정 전용 엔드포인트 없음.
+  - 기존: feed?limit=1 으로 최적 후보 조회 (공유 DB 오염 문제 있음)
+  - 신규: discover?capability=research,design (AND 필터) 로 정확한 후보 타겟팅
 
-Setup  S6와 동일 (AgentA + AgentC·D under Principal B)
-7      GET /v1/agents/{A}/feed?limit=1 → 정확히 1개 반환
-         items[0] 필드 검증: agent_id·compatibility_total·common_tags
-         items[0].agent_id == AgentC (Cap=3/5=0.6 > AgentD Cap=0)
+Setup  S6와 동일 (AgentA + AgentC·D under Principal B) — 실행마다 신규 UUID
+
+7      GET /v1/agents/{A}/feed?limit=1          → 1개 반환·compat ≥ AgentC compat 검증
+         (shared DB로 타 run 에이전트가 1위일 수 있음)
+
+7b     GET /v1/agents/{A}/discover?capability=research,design
+         → AgentC(research+design 보유) 포함·AgentD(writing,management) 미포함
+         → capability AND 필터로 이번 run AgentC를 정확히 타겟팅
+         → items[0]이 최적 후보 (compatibility_total 기준 정렬)
 """
 from __future__ import annotations
 import sys, os
@@ -150,6 +156,58 @@ def test_7_best_match_via_feed(state: dict) -> bool:
     return ok
 
 
+# ── 7b ───────────────────────────────────────────────────────────────────────
+
+def test_7b_discover_capability(state: dict) -> bool:
+    """
+    GET /v1/agents/{A}/discover?capability=research,design
+    → capability AND 필터로 AgentC(coding,research,design) 정확히 타겟팅
+    → AgentD(writing,management) 미포함 확인
+    → items[0] 최적 후보 검증 (공유 DB 오염과 무관)
+    """
+    agent_a_id = state.get("agent_a_id")
+    agent_c_id = state.get("agent_c_id")
+    agent_d_id = state.get("agent_d_id")
+    if not agent_a_id:
+        return _fail("7b SKIP (no agent_a_id)")
+
+    resp = api_get(f"/v1/agents/{agent_a_id}/discover?capability=research,design", JWT_A)
+    ok = check_status("7b discover?capability=research,design", resp, 200)
+    if not ok:
+        return False
+
+    data  = resp.json().get("data", {})
+    items = data.get("items", [])
+    ok &= check_truthy("7b items not empty", len(items) > 0)
+    if not items:
+        return False
+
+    ids = [i.get("agent_id") for i in items]
+
+    # AgentC (research + design 보유) → 포함
+    if agent_c_id in ids:
+        c_compat = next((i.get("compatibility_total") for i in items if i.get("agent_id") == agent_c_id), None)
+        _ok(f"7b AgentC in discover (compat={c_compat})")
+    else:
+        ok = _fail("7b AgentC not in discover (should have research+design tags)")
+
+    # AgentD (writing, management만 보유) → 미포함
+    if agent_d_id not in ids:
+        _ok("7b AgentD excluded by capability filter")
+    else:
+        ok = _fail("7b AgentD in discover (should be filtered out)")
+
+    # items[0] 최적 후보 필드 검증
+    best = items[0]
+    ok &= check_not_none("7b best agent_id",           best, "agent_id")
+    ok &= check_not_none("7b best compatibility_total", best, "compatibility_total")
+    ok &= check_not_none("7b best common_tags",         best, "common_tags")
+    print(f"  INFO  7b best via discover: {best.get('agent_id')} (compat={best.get('compatibility_total')})")
+    print(f"  INFO  7b applied_filters={data.get('applied_filters')}")
+
+    return ok
+
+
 def main() -> int:
     state: dict = {}
     if not setup(state):
@@ -157,7 +215,8 @@ def main() -> int:
         return 1
 
     tests = [
-        ("7 best match via feed?limit=1", test_7_best_match_via_feed),
+        ("7 best match via feed?limit=1",      test_7_best_match_via_feed),
+        ("7b discover capability=research,design", test_7b_discover_capability),
     ]
     _, f = run_suite(SUITE_ID, tests, state)
     return f
