@@ -646,6 +646,18 @@ async def update_agent_tier(agent_id: UUID, tier: str) -> None:
     )
 
 
+async def insert_date_with_id(
+    date_id: UUID,
+    match_id: UUID,
+    date_type: str | None = None,
+) -> asyncpg.Record:
+    """DateSession이 내부적으로 생성한 date_id를 그대로 DB에 삽입한다."""
+    return await get_pool().fetchrow(
+        "INSERT INTO dates (date_id, match_id, type) VALUES ($1, $2, $3) RETURNING *",
+        date_id, match_id, date_type,
+    )
+
+
 async def get_relationships_for_agent(agent_id: UUID) -> list[asyncpg.Record]:
     return await get_pool().fetch(
         "SELECT r.*,"

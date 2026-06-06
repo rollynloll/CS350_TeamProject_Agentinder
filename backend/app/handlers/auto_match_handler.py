@@ -1,31 +1,30 @@
 from __future__ import annotations
 
 import asyncio
-import json as _json
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
+from models.date.date_session import DateOutcome, DateSession, DateStatus
 
 from .. import db, deps
 from ..auth.authorization_policy import check_agent_actor
 from ..auth.error_handler_middleware import envelope
 from ..deps import get_auth, get_event_bus, get_principal
-from ..pubsub.domain_events import MatchCreated
+from ..pubsub.domain_events import DateEnded, DateStarted, MessageCreated
+from ..services.matching_service_impl import MatchingServiceImpl
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/agents", tags=["auto-match"])
 
-_DEFAULT_MIN_COMPAT = 0.3
 
+# ── 백그라운드 스케줄러 ────────────────────────────────────────────────────
 
 async def run_background_loop(interval_seconds: int = 300) -> None:
-    """auto_match=true 에이전트 전체를 주기적으로 자율 스와이프한다.
-
-    FastAPI lifespan에서 asyncio.create_task()로 실행된다.
-    서버 종료 시 태스크가 cancel되면 CancelledError를 받고 조용히 종료한다.
-    """
+    """auto_match=true 에이전트를 주기적으로 자율 매칭한다."""
     logger.info("auto-match background loop 시작 (주기 %ds)", interval_seconds)
     try:
         while True:
@@ -36,186 +35,204 @@ async def run_background_loop(interval_seconds: int = 300) -> None:
 
 
 async def _run_all_auto_match_agents() -> None:
-    """DB에서 auto_match=true 에이전트를 조회해 각각 자율 스와이프를 실행한다."""
-    try:
-        rows = await db.get_auto_match_agents()
-    except Exception:
-        logger.exception("auto-match: get_auto_match_agents 조회 실패")
-        return
-
+    rows = await db.get_auto_match_agents()
     if not rows:
         return
 
     bus = deps.event_bus
+    svc = MatchingServiceImpl(bus)
+
     logger.info("auto-match 루프 실행: 대상 에이전트 %d개", len(rows))
     for row in rows:
         try:
-            result = await _auto_swipe_for_agent(row["agent_id"], _DEFAULT_MIN_COMPAT, bus)
-            if result.get("swipe_count", 0) or result.get("match_count", 0):
-                logger.info(
-                    "auto-match 결과 agent=%s swipes=%d matches=%d",
-                    row["agent_id"],
-                    result.get("swipe_count", 0),
-                    result.get("match_count", 0),
-                )
+            session = await svc.runAsyncMatch(row["agent_id"])
+            if session is not None:
+                await _launch_date_session(session, bus)
         except Exception:
             logger.exception("auto-match: agent=%s 처리 중 오류", row["agent_id"])
 
 
-async def _auto_swipe_for_agent(
-    agent_id: UUID,
-    min_compat: float,
-    bus,
-) -> dict:
-    """단일 에이전트에 대해 피드를 순회하며 조건 충족 상대를 자동으로 오른쪽 스와이프한다.
+async def _launch_date_session(session: DateSession, bus) -> None:
+    """DB date 레코드를 생성하고 DateSession을 백그라운드로 실행한다."""
+    await db.insert_date_with_id(session.date_id, session.match_id, "coffee_chat")
+    await db.start_date(session.date_id)
+    asyncio.create_task(_run_and_persist(session, bus))
 
-    - 이미 스와이프한 상대는 건너뛴다.
-    - 호환도 >= min_compat 조건을 만족하면 right 스와이프를 기록하고,
-      상대방도 right/up 스와이프 기록이 있으면 매치를 생성한다.
-    """
-    from models.agent.agent_profile import AgentProfile
-    from models.enums import VisibilityEnum
 
-    row = await db.get_agent_full(agent_id)
-    if row is None:
-        return {"agent_id": str(agent_id), "skipped": True, "reason": "not_found"}
+# ── DateSession 실행 및 결과 영속화 ──────────────────────────────────────
 
-    viewer_agent = deps.reconstruct_agent_from_row(row)
-    viewer_trust = viewer_agent.getTrustScore() or 0.0
+async def _run_and_persist(session: DateSession, bus) -> None:
+    """DateSession.run() 완료 후 transcript·rating·관계를 DB에 저장한다."""
+    agent_a_id: UUID = session._agent_a.agent_id
+    agent_b_id: UUID = session._agent_b.agent_id
 
-    already_rows = await db.get_pool().fetch(
-        "SELECT target_id FROM swipes WHERE agent_id = $1", agent_id
-    )
-    already_swiped: set[UUID] = {r["target_id"] for r in already_rows}
+    try:
+        bus.publish(DateStarted(date_id=session.date_id, match_id=session.match_id))
+        result = await session.run()
 
-    sm = deps.score_manager
-    assert sm is not None
+        # ── 1. 대화 내용 저장 ──────────────────────────────────────────
+        # transcript role: "assistant" → agent_a, "user" → agent_b
+        for msg in result.transcript:
+            sender_id = agent_a_id if msg.role == "assistant" else agent_b_id
+            msg_row = await db.insert_message(session.match_id, sender_id, msg.content)
+            bus.publish(MessageCreated(
+                message_id=msg_row["message_id"],
+                match_id=session.match_id,
+                sender_agent_id=sender_id,
+                content=msg.content,
+            ))
 
-    candidates = await db.get_all_visible_agents(exclude_agent_id=agent_id, exclude_principal_id=row["principal_id"])
+        # ── 2. 데이트 종료 ─────────────────────────────────────────────
+        is_noshow = result.status == DateStatus.NO_SHOW
+        await db.end_date(session.date_id, result.outcome.value, is_noshow)
 
-    swipe_count = 0
-    match_count = 0
-
-    for cand in candidates:
-        cand_id: UUID = cand["agent_id"]
-        if cand_id in already_swiped:
-            continue
-
-        vis = str(cand["visibility"]).upper()
-        if vis == "HIDDEN":
-            continue
-        if vis == "RESTRICTED" and viewer_trust < 0.5:
-            continue
-
-        try:
-            style_vec = cand["style_vector"]
-            if isinstance(style_vec, str):
-                style_vec = _json.loads(style_vec)
-            cand_profile = AgentProfile(
-                agent_id=cand_id,
-                display_name=cand["display_name"],
-                visibility=VisibilityEnum(vis),
-                capability_tags=list(cand["capability_tags"] or []),
-                style_vector=dict(style_vec or {}),
-                tier_badge=cand["tier_badge"],
-                date_count=cand["date_count"],
+        # ── 3. 평점 저장 ───────────────────────────────────────────────
+        for rating in result.ratings:
+            await db.insert_rating(
+                date_id=rating.date_id,
+                rater_principal_id=rating.rater_principal_id,
+                rated_agent_id=rating.rated_agent_id,
+                stars=rating.stars,
+                compatibility=rating.compatibility,
             )
-            compat = sm.getCompatibility(viewer_agent.getProfile(), cand_profile).total
-        except Exception:  # noqa: BLE001
-            logger.warning("auto-match compat 계산 실패 viewer=%s cand=%s", agent_id, cand_id)
-            continue
 
-        if compat < min_compat:
-            continue
-
-        await db.insert_swipe(agent_id, cand_id, "right")
-        swipe_count += 1
-        already_swiped.add(cand_id)
-        logger.info("auto-swipe viewer=%s cand=%s compat=%.3f", agent_id, cand_id, compat)
-
-        counter = await db.get_counter_swipe(agent_id, cand_id)
-        if counter:
-            a, b = sorted([agent_id, cand_id], key=str)
-            match_row = await db.insert_match(a, b)
-            if match_row:
-                match_count += 1
-                bus.publish(MatchCreated(
-                    match_id=match_row["match_id"],
-                    agent_a_id=a,
-                    agent_b_id=b,
-                    principal_a_id=row["principal_id"],
-                    principal_b_id=cand["principal_id"],
-                ))
-                logger.info("auto-match 매치 생성 %s <-> %s", agent_id, cand_id)
-
-                # 상대도 auto_match=true이면 Principal 개입 없이 데이트를 바로 시작
-                if cand.get("auto_match"):
-                    from ..handlers.date_handler import auto_start_date
-                    task = row.get("task_description") or "Let's start our collaboration!"
-                    await auto_start_date(
-                        match_id=match_row["match_id"],
-                        initiator_agent_id=agent_id,
-                        second_agent_id=cand_id,
-                        task=task,
-                        bus=bus,
+        # ── 4. 신뢰 점수 + 관계 티어 갱신 ─────────────────────────────
+        sm = deps.score_manager
+        if sm is not None:
+            for aid in (agent_a_id, agent_b_id):
+                trust = sm.getTrust(aid)
+                breakdown = sm.getTrustBreakdown(aid)
+                if breakdown is not None:
+                    await db.upsert_trust_score(
+                        agent_id=aid,
+                        composite=trust,
+                        peer_ratings_avg=breakdown.peer_ratings_avg,
+                        data_point_count=breakdown.data_point_count,
                     )
 
-    return {
-        "agent_id": str(agent_id),
-        "swipe_count": swipe_count,
-        "match_count": match_count,
-    }
+            if result.outcome == DateOutcome.SUCCESSFUL and result.ratings:
+                avg_stars = sum(r.stars for r in result.ratings) / len(result.ratings)
+                sm.recordSuccessfulDate(agent_a_id, agent_b_id, avg_stars / 5.0)
+
+            rel = sm._get_or_create_rel(agent_a_id, agent_b_id)
+            new_tier = sm.checkUpgrade(agent_a_id, agent_b_id)
+            await db.upsert_relationship(
+                agent_a_id=agent_a_id,
+                agent_b_id=agent_b_id,
+                successful_dates=rel.successful_dates,
+                avg_rating=rel.avg_rating or 0.0,
+                tier=(new_tier or rel.tier).value,
+            )
+            if new_tier is not None:
+                await db.update_agent_tier(agent_a_id, new_tier.value)
+                await db.update_agent_tier(agent_b_id, new_tier.value)
+
+        bus.publish(DateEnded(
+            date_id=session.date_id,
+            match_id=session.match_id,
+            outcome=result.outcome.value,
+        ))
+        logger.info(
+            "date 완료: date=%s outcome=%s trust_delta=%.4f imbalanced=%s",
+            session.date_id, result.outcome.value, result.trust_delta, result.is_imbalanced,
+        )
+
+    except Exception:
+        logger.exception("date 실패: date=%s", session.date_id)
+        try:
+            await db.end_date(session.date_id, "failed")
+        except Exception:
+            pass
 
 
-@router.post("/{agent_id}/auto-match/run")
-async def run_auto_match_for_agent(
+# ── API 엔드포인트 ────────────────────────────────────────────────────────
+
+class AiMatchRequest(BaseModel):
+    topic: str
+
+
+@router.post("/{agent_id}/ai-match")
+async def run_ai_match(
     agent_id: UUID,
-    min_compat: float = Query(
-        _DEFAULT_MIN_COMPAT, ge=0.0, le=1.0, alias="minCompat",
-        description="자동 스와이프 최소 호환도 (0.0~1.0, 기본 0.3)",
-    ),
+    body: AiMatchRequest,
     principal=Depends(get_principal),
     bus=Depends(get_event_bus),
     ctx=Depends(get_auth),
 ) -> dict:
-    """특정 에이전트의 자율 스와이프를 즉시 실행한다.
+    """AI 호환성 기반 매칭 + 즉시 데이트 시작.
 
-    - 에이전트 소유자(Principal) 인증 필요.
-    - auto_match 플래그 여부와 관계없이 명시적 호출이므로 실행된다.
-    - 피드 전체를 순회하며 minCompat 이상인 상대를 right 스와이프한다.
-    - 상호 스와이프인 경우 매치를 즉시 생성한다.
+    - compat 최고점 상대를 선택한다.
+    - skipTrustCheck=False (동기 매칭)
     """
     agent_row = await db.get_agent_row(agent_id)
     if agent_row is None:
         raise KeyError(f"에이전트를 찾을 수 없습니다: {agent_id}")
     check_agent_actor(ctx, agent_id, agent_row)
 
-    result = await _auto_swipe_for_agent(agent_id, min_compat, bus)
-    return envelope(data=result)
+    svc = MatchingServiceImpl(bus)
+    session = await svc.runAiMatch(agent_id, body.topic)
+
+    if session is None:
+        return envelope(data={"matched": False, "reason": "no_suitable_partner"})
+
+    await _launch_date_session(session, bus)
+    return envelope(data={
+        "matched": True,
+        "match_id": str(session.match_id),
+        "date_id": str(session.date_id),
+    })
+
+
+@router.post("/{agent_id}/auto-match/run")
+async def run_auto_match_for_agent(
+    agent_id: UUID,
+    principal=Depends(get_principal),
+    bus=Depends(get_event_bus),
+    ctx=Depends(get_auth),
+) -> dict:
+    """특정 에이전트의 자율 매칭을 즉시 실행한다."""
+    agent_row = await db.get_agent_row(agent_id)
+    if agent_row is None:
+        raise KeyError(f"에이전트를 찾을 수 없습니다: {agent_id}")
+    check_agent_actor(ctx, agent_id, agent_row)
+
+    svc = MatchingServiceImpl(bus)
+    session = await svc.runAsyncMatch(agent_id)
+
+    if session is None:
+        return envelope(data={"matched": False, "reason": "no_eligible_partner"})
+
+    await _launch_date_session(session, bus)
+    return envelope(data={
+        "matched": True,
+        "match_id": str(session.match_id),
+        "date_id": str(session.date_id),
+    })
 
 
 @router.post("/auto-match/run")
 async def run_auto_match_all(
-    min_compat: float = Query(
-        _DEFAULT_MIN_COMPAT, ge=0.0, le=1.0, alias="minCompat",
-        description="자동 스와이프 최소 호환도 (0.0~1.0, 기본 0.3)",
-    ),
     principal=Depends(get_principal),
     bus=Depends(get_event_bus),
 ) -> dict:
-    """현재 Principal이 소유한 auto_match=true 에이전트 전체에 대해 자율 스와이프를 실행한다.
-
-    - auto_match=false 에이전트는 건너뛴다.
-    - 각 에이전트별 스와이프/매치 결과를 반환한다.
-    """
+    """현재 Principal이 소유한 auto_match=true 에이전트 전체에 대해 자율 매칭을 실행한다."""
     agent_list = await db.get_principal_agents(principal.principal_id)
+    svc = MatchingServiceImpl(bus)
 
     results = []
     for row in agent_list:
         full = await db.get_agent_row(row["agent_id"])
         if full is None or not full.get("auto_match"):
             continue
-        result = await _auto_swipe_for_agent(row["agent_id"], min_compat, bus)
-        results.append(result)
+        session = await svc.runAsyncMatch(row["agent_id"])
+        if session is not None:
+            await _launch_date_session(session, bus)
+            results.append({
+                "agent_id": str(row["agent_id"]),
+                "matched": True,
+                "match_id": str(session.match_id),
+            })
+        else:
+            results.append({"agent_id": str(row["agent_id"]), "matched": False})
 
     return envelope(data={"results": results, "total_agents": len(results)})

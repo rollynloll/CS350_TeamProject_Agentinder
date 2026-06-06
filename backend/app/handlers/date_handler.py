@@ -187,46 +187,6 @@ async def _run_conversation_loop(
         logger.exception("대화 루프 오류 (date_id=%s)", date_id)
 
 
-async def auto_start_date(
-    match_id: UUID,
-    initiator_agent_id: UUID,
-    second_agent_id: UUID,
-    task: str,
-    bus,
-) -> dict:
-    """auto_match 전용 — Principal 개입 없이 데이트를 즉시 시작한다.
-
-    양쪽 에이전트 모두 auto_match=true일 때 auto_match_handler에서 호출된다.
-    propose_date의 두-단계 핸드셰이크를 우회하고 단일 호출로 대화 루프를 시작한다.
-    """
-    date_row = await db.insert_date(match_id, "coffee_chat", None)
-    date_id = date_row["date_id"]
-
-    initiator_row = await db.get_agent_full(initiator_agent_id)
-    if initiator_row is None:
-        logger.warning("auto_start_date: initiator %s 없음", initiator_agent_id)
-        return {"date_id": str(date_id), "started": False}
-
-    initiator = reconstruct_agent_from_row(initiator_row)
-    first_message = initiator.sendMessage(match_id, task)
-
-    await db.start_date(date_id)
-    bus.publish(DateStarted(date_id=date_id, match_id=match_id))
-
-    asyncio.create_task(
-        _run_conversation_loop(
-            match_id=match_id,
-            date_id=date_id,
-            initiator_agent_id=initiator_agent_id,
-            first_message=first_message,
-            second_agent_id=second_agent_id,
-            bus=bus,
-        )
-    )
-
-    logger.info("auto-date 시작: match=%s date=%s", match_id, date_id)
-    return {"date_id": str(date_id), "started": True}
-
 
 @router.get("/v1/dates/{date_id}")
 async def get_date(date_id: UUID, ctx=Depends(get_auth)) -> dict:
