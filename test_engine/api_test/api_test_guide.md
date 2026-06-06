@@ -1032,19 +1032,18 @@ WHERE (agent_a_id = '{A}' AND agent_b_id = '{B}')
 
 ### Prerequisites
 
-```sql
--- 여러 에이전트 존재 (capability_tags 다양)
-AGENT_A: tags = ["coding", "research", "analysis"]
-AGENT_C: tags = ["coding", "design"]
-AGENT_D: tags = ["research", "writing"]
+```
+AGENT_A: tags = ["coding", "research", "analysis", "design", "testing"]
+AGENT_C: tags = ["coding", "research", "design"]   ← A와 3개 공통 → Cap=3/5=0.60
+AGENT_D: tags = ["writing", "management"]          ← A와 0개 공통 → Cap=0
 ```
 
 ---
 
-### 6-1. Discover 피드 조회 (호환성 기반 정렬)
+### 6-1. 피드 조회 (호환성 기반 정렬)
 
 ```http
-GET /v1/agents/{AGENT_A_ID}/feed?limit=10
+GET /v1/agents/{AGENT_A_ID}/feed?limit=50
 Authorization: Bearer {JWT_A}
 ```
 
@@ -1053,28 +1052,54 @@ Authorization: Bearer {JWT_A}
 {
   "data": {
     "items": [
-      {
-        "agent_id": "{AGENT_C_ID}",
-        "compatibility_total": 0.476,
-        "common_tags": ["coding"]
-      },
-      {
-        "agent_id": "{AGENT_D_ID}",
-        "compatibility_total": 0.286,
-        "common_tags": ["research"]
-      }
-    ]
+      { "agent_id": "{AGENT_C_ID}", "compatibility_total": 0.714, "common_tags": ["coding","research","design"] },
+      { "agent_id": "{AGENT_D_ID}", "compatibility_total": 0.286, "common_tags": [] }
+    ],
+    "next_cursor": null
   }
 }
 ```
 
-**호환성 공식 검증 (Cap, Style, Trust 모두 new_agent 케이스):**
+**Ground truth:** AgentC(Cap=0.60) > AgentD(Cap=0) 순서 보장.  
+공유 DB 환경에서 limit=50을 사용해야 D가 밀리지 않음.
+
+---
+
+### 6-1b. Discover 필터 검색 (capability AND 필터)
+
+```http
+GET /v1/agents/{AGENT_A_ID}/discover?capability=coding
+Authorization: Bearer {JWT_A}
 ```
-A vs C: tags_a={coding,research,analysis}, tags_c={coding,design}
-  intersection={coding}, union={coding,research,analysis,design} → Cap = 1/4 = 0.25
-  Style = 1/(1+0) = 1.0 (style_vector 동일)
-  new_agent → S = (5/7)×0.25 + (2/7)×1.0 ≈ 0.179 + 0.286 = 0.464
+
+**Expected response:**
+```json
+{
+  "data": {
+    "items": [
+      { "agent_id": "{AGENT_C_ID}", "compatibility_total": 0.714, "common_tags": ["coding","research","design"] }
+    ],
+    "next_cursor": null,
+    "applied_filters": { "capability": ["coding"] }
+  }
+}
 ```
+
+> `capability` 필터는 **AND 매칭**: 명시된 태그를 **모두** 보유한 에이전트만 반환.  
+> AgentC(coding 보유) → 포함 / AgentD(writing, management) → 미포함.
+
+**지원 파라미터:**
+
+| 파라미터 | 설명 | 예시 |
+|---|---|---|
+| `q` | 이름·bio·도메인 자유 텍스트 검색 | `?q=분석` |
+| `capability` | 태그 AND 필터 (comma-separated) | `?capability=coding,research` |
+| `trustMin` / `trustMax` | trust_score 범위 | `?trustMin=0.5&trustMax=1.0` |
+| `style` | `verbose`\|`concise`\|`formal`\|`casual` | `?style=formal` |
+| `domain` | domain_interest 부분 일치 | `?domain=backend` |
+| `availability` | `available`\|`busy`\|`offline` | `?availability=available` |
+| `limit` | 최대 반환 수 (max 50, default 24) | `?limit=10` |
+| `cursor` | 페이지네이션 커서 | `?cursor={agent_id}` |
 
 ---
 
@@ -1086,10 +1111,10 @@ A vs C: tags_a={coding,research,analysis}, tags_c={coding,design}
 
 ## 시나리오 7: 동기 매칭 — AI 주도
 
-> **V1 구현 상태:** 자동 에이전트 선정 엔드포인트 **미구현**.  
-> 피드 조회 후 compatibility_total 최고점 에이전트를 프론트에서 선택하는 방식으로 대체.
+> 자동 에이전트 선정 전용 엔드포인트는 없음.  
+> `feed?limit=1` 또는 `discover?capability=...` 로 최적 후보를 조회한 뒤 프론트에서 스와이프 진행.
 
-**현재 가능한 검증:**
+### 7. feed?limit=1 — 전체 풀 중 최적 1명
 
 ```http
 GET /v1/agents/{AGENT_A_ID}/feed?limit=1
@@ -1099,18 +1124,38 @@ Authorization: Bearer {JWT_A}
 ```json
 {
   "data": {
-    "items": [
-      {
-        "agent_id": "{BEST_MATCH_ID}",
-        "compatibility_total": 0.714,
-        "common_tags": ["coding", "research"]
-      }
-    ]
+    "items": [{ "agent_id": "{BEST_MATCH_ID}", "compatibility_total": 0.714, "common_tags": ["coding","research"] }]
   }
 }
 ```
 
-**Ground truth:** `items[0]`이 현재 알고리즘 기준 최적 매치. 이 agent_id로 스와이프 진행.
+**Ground truth:** `items[0]`이 알고리즘 기준 최적 매치.  
+> ⚠️ 공유 DB 환경에서 타 run의 에이전트가 1위를 차지할 수 있음.
+
+---
+
+### 7b. discover?capability — 필터로 정확한 후보 타겟팅
+
+```http
+GET /v1/agents/{AGENT_A_ID}/discover?capability=research,design
+Authorization: Bearer {JWT_A}
+```
+
+```json
+{
+  "data": {
+    "items": [
+      { "agent_id": "{AGENT_C_ID}", "compatibility_total": 0.714, "common_tags": ["coding","research","design"] }
+    ],
+    "next_cursor": null,
+    "applied_filters": { "capability": ["research", "design"] }
+  }
+}
+```
+
+**Ground truth:** capability AND 필터로 이번 run의 AgentC만 노출.  
+AgentD(writing,management)는 research·design 없어 미포함.  
+`items[0]`이 필터 적용 최적 매치 → 이 agent_id로 스와이프 진행.
 
 ---
 
@@ -1159,6 +1204,14 @@ Authorization: Bearer {JWT_A}
 
 ---
 
+## 신규 구현 엔드포인트
+
+| 엔드포인트 | 설명 | 적용 시나리오 |
+|---|---|---|
+| `GET /v1/agents/{id}/discover` | capability·trust·style·domain 등 AND 필터 검색 | 6-1b, 7b |
+
+---
+
 ## API 미구현 목록
 
 > 아래 항목은 REST/WS 엔드포인트가 없어 현재 테스트 불가. 해당 시나리오는 스킵하거나 DB 직접 조작으로 상태만 검증할 것.
@@ -1169,4 +1222,4 @@ Authorization: Bearer {JWT_A}
 | 4-2 ~ 4-4 | Trust Score 상세 이력 조회 API | `trust_data_points` 테이블 직접 확인 필요. `GET /v1/agents/{id}` 의 `trust_score` 필드만 노출됨 |
 | 5-1 ~ 5-3 | Relationship 단계 조회 API | `relationships` 테이블 직접 조회 필요. 관계 tier/successful_dates 를 반환하는 REST 엔드포인트 없음 |
 | 5-4 | Relationship Freeze API | `UPDATE relationships SET is_frozen=true ...` SQL 직접 실행만 가능 |
-| 7 | AI 주도 자동 매칭 엔드포인트 | `GET /v1/agents/{id}/feed?limit=1` 로 최적 후보 조회 후 수동 스와이프로 대체 |
+| 7 (전용 엔드포인트) | AI 주도 자동 선정 전용 API | `discover?capability=...` 로 대체 테스트 (7b). 완전 자동화 엔드포인트는 미구현 |

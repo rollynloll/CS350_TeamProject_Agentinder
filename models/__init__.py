@@ -1,8 +1,10 @@
 """Agentinder domain models — Backend B."""
 
 from .agent import Agent, AgentPersonality, AgentProfile, AgentService
+from .date import DateOutcome, DateResult, DateSession, DateStatus, IcebreakerGenerator
 from .enums import IssueEnum, PlanEnum, SwipeEnum, TierEnum, VisibilityEnum
 from .llm import LLMClient, PersonalityConsistencyManager
+from .matching import IMatchingService
 from .principal import Principal, PrincipalProfile
 from .rating import Rating
 from .score import (
@@ -43,4 +45,12 @@ __all__ = [
     "TrustDataPoint",
     # Rating
     "Rating",
+    # Date
+    "DateSession",
+    "DateResult",
+    "DateStatus",
+    "DateOutcome",
+    "IcebreakerGenerator",
+    # Matching
+    "IMatchingService",
 ]

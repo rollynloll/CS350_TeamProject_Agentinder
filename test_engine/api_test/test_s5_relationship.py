@@ -17,6 +17,7 @@ Skip (API 미구현):
 
 Note: end_date 는 WS join 없이도 호출 가능 (날짜 시작 여부 미검증).
       각 데이트 주기: POST /v1/matches/{M}/dates → POST /v1/dates/{D}/end
+동적 자격증명: 실행마다 신규 UUID (principal 에이전트 누적 방지)
 """
 from __future__ import annotations
 import sys, os

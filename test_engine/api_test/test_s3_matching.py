@@ -11,9 +11,10 @@ Setup  Principal A·B 멱등 생성 + Agent A(AlphaBot)·B(BetaBot) 신규 생�
 3-4    POST /v1/matches/{M}/approve        → status=approved
 3-5    POST /v1/matches/{M}/dates          → date_id·type·is_noshow=false·started_at=null
 3-6    WS   join_date (A 먼저·B 이후)     → A: started=false, B: started=true
-3-7    WS   send_message (A·B 각각)       → message_sent + response·message_id (총 4건)
-3-8    GET  /v1/matches/{M}/messages       → 대화 기록 4건 검증 + 로그 파일 저장
-                                             logs/conversation_{timestamp}_{run_id}.log
+3-7    WS   send_message (A·B 교대 5회)   → message_sent (A·B 각 첫 응답 검증)
+3-8    GET  /v1/matches/{M}/messages?limit=10 → 대화 기록 10건 검증 + 로그 파일 저장
+                                               5회 전송 × (유저메시지+LLM응답) = 10건
+                                               logs/conversation_{timestamp}_{run_id}.log
 3-9    POST /v1/dates/{D}/end             → outcome=completed
 
 Skip (API 미구현):
