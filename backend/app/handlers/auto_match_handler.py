@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/agents", tags=["auto-match"])
 
+# OpenAI TPM 한도(30,000 tokens/min) 초과 방지 — 동시 DateSession 수를 제한한다.
+# 세션 1개당 ~2,000 tokens/turn × 20 turns = ~40,000 tokens.
+# 2개 동시 실행 시 ~4,000 tokens/min → 안전 범위.
+_DATE_SEMAPHORE = asyncio.Semaphore(2)
+
 
 # ── 백그라운드 스케줄러 ────────────────────────────────────────────────────
 
@@ -66,83 +71,85 @@ async def _run_and_persist(session: DateSession, bus) -> None:
     agent_a_id: UUID = session._agent_a.agent_id
     agent_b_id: UUID = session._agent_b.agent_id
 
-    try:
-        bus.publish(DateStarted(date_id=session.date_id, match_id=session.match_id))
-        result = await session.run()
-
-        # ── 1. 대화 내용 저장 ──────────────────────────────────────────
-        # transcript role: "assistant" → agent_a, "user" → agent_b
-        for msg in result.transcript:
-            sender_id = agent_a_id if msg.role == "assistant" else agent_b_id
-            msg_row = await db.insert_message(session.match_id, sender_id, msg.content)
-            bus.publish(MessageCreated(
-                message_id=msg_row["message_id"],
-                match_id=session.match_id,
-                sender_agent_id=sender_id,
-                content=msg.content,
-            ))
-
-        # ── 2. 데이트 종료 ─────────────────────────────────────────────
-        is_noshow = result.status == DateStatus.NO_SHOW
-        await db.end_date(session.date_id, result.outcome.value, is_noshow)
-
-        # ── 3. 평점 저장 ───────────────────────────────────────────────
-        for rating in result.ratings:
-            await db.insert_rating(
-                date_id=rating.date_id,
-                rater_principal_id=rating.rater_principal_id,
-                rated_agent_id=rating.rated_agent_id,
-                stars=rating.stars,
-                compatibility=rating.compatibility,
-            )
-
-        # ── 4. 신뢰 점수 + 관계 티어 갱신 ─────────────────────────────
-        sm = deps.score_manager
-        if sm is not None:
-            for aid in (agent_a_id, agent_b_id):
-                trust = sm.getTrust(aid)
-                breakdown = sm.getTrustBreakdown(aid)
-                if breakdown is not None:
-                    await db.upsert_trust_score(
-                        agent_id=aid,
-                        composite=trust,
-                        peer_ratings_avg=breakdown.peer_ratings_avg,
-                        data_point_count=breakdown.data_point_count,
-                    )
-
-            if result.outcome == DateOutcome.SUCCESSFUL and result.ratings:
-                avg_stars = sum(r.stars for r in result.ratings) / len(result.ratings)
-                sm.recordSuccessfulDate(agent_a_id, agent_b_id, avg_stars / 5.0)
-
-            rel = sm._get_or_create_rel(agent_a_id, agent_b_id)
-            new_tier = sm.checkUpgrade(agent_a_id, agent_b_id)
-            await db.upsert_relationship(
-                agent_a_id=agent_a_id,
-                agent_b_id=agent_b_id,
-                successful_dates=rel.successful_dates,
-                avg_rating=rel.avg_rating or 0.0,
-                tier=(new_tier or rel.tier).value,
-            )
-            if new_tier is not None:
-                await db.update_agent_tier(agent_a_id, new_tier.value)
-                await db.update_agent_tier(agent_b_id, new_tier.value)
-
-        bus.publish(DateEnded(
-            date_id=session.date_id,
-            match_id=session.match_id,
-            outcome=result.outcome.value,
-        ))
-        logger.info(
-            "date 완료: date=%s outcome=%s trust_delta=%.4f imbalanced=%s",
-            session.date_id, result.outcome.value, result.trust_delta, result.is_imbalanced,
-        )
-
-    except Exception:
-        logger.exception("date 실패: date=%s", session.date_id)
+    async with _DATE_SEMAPHORE:
+        logger.info("date 시작 (세마포어 획득): date=%s", session.date_id)
         try:
-            await db.end_date(session.date_id, "failed")
+            bus.publish(DateStarted(date_id=session.date_id, match_id=session.match_id))
+            result = await session.run()
+
+            # ── 1. 대화 내용 저장 ────────────────────────────────────────
+            # transcript role: "assistant" → agent_a, "user" → agent_b
+            for msg in result.transcript:
+                sender_id = agent_a_id if msg.role == "assistant" else agent_b_id
+                msg_row = await db.insert_message(session.match_id, sender_id, msg.content)
+                bus.publish(MessageCreated(
+                    message_id=msg_row["message_id"],
+                    match_id=session.match_id,
+                    sender_agent_id=sender_id,
+                    content=msg.content,
+                ))
+
+            # ── 2. 데이트 종료 ───────────────────────────────────────────
+            is_noshow = result.status == DateStatus.NO_SHOW
+            await db.end_date(session.date_id, result.outcome.value, is_noshow)
+
+            # ── 3. 평점 저장 ─────────────────────────────────────────────
+            for rating in result.ratings:
+                await db.insert_rating(
+                    date_id=rating.date_id,
+                    rater_principal_id=rating.rater_principal_id,
+                    rated_agent_id=rating.rated_agent_id,
+                    stars=rating.stars,
+                    compatibility=rating.compatibility,
+                )
+
+            # ── 4. 신뢰 점수 + 관계 티어 갱신 ───────────────────────────
+            sm = deps.score_manager
+            if sm is not None:
+                for aid in (agent_a_id, agent_b_id):
+                    trust = sm.getTrust(aid)
+                    breakdown = sm.getTrustBreakdown(aid)
+                    if breakdown is not None:
+                        await db.upsert_trust_score(
+                            agent_id=aid,
+                            composite=trust,
+                            peer_ratings_avg=breakdown.peer_ratings_avg,
+                            data_point_count=breakdown.data_point_count,
+                        )
+
+                if result.outcome == DateOutcome.SUCCESSFUL and result.ratings:
+                    avg_stars = sum(r.stars for r in result.ratings) / len(result.ratings)
+                    sm.recordSuccessfulDate(agent_a_id, agent_b_id, avg_stars / 5.0)
+
+                rel = sm._get_or_create_rel(agent_a_id, agent_b_id)
+                new_tier = sm.checkUpgrade(agent_a_id, agent_b_id)
+                await db.upsert_relationship(
+                    agent_a_id=agent_a_id,
+                    agent_b_id=agent_b_id,
+                    successful_dates=rel.successful_dates,
+                    avg_rating=rel.avg_rating or 0.0,
+                    tier=(new_tier or rel.tier).value,
+                )
+                if new_tier is not None:
+                    await db.update_agent_tier(agent_a_id, new_tier.value)
+                    await db.update_agent_tier(agent_b_id, new_tier.value)
+
+            bus.publish(DateEnded(
+                date_id=session.date_id,
+                match_id=session.match_id,
+                outcome=result.outcome.value,
+            ))
+            logger.info(
+                "date 완료: date=%s outcome=%s trust_delta=%.4f imbalanced=%s",
+                session.date_id, result.outcome.value, result.trust_delta, result.is_imbalanced,
+            )
+
         except Exception:
-            pass
+            logger.exception("date 실패: date=%s", session.date_id)
+            try:
+                await db.end_date(session.date_id, "failed")
+            except Exception:
+                pass
 
 
 # ── API 엔드포인트 ────────────────────────────────────────────────────────

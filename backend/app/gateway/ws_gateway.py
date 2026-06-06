@@ -36,12 +36,18 @@ class WSGateway:
         try:
             ctx = await AuthMiddleware._verify(token)
             principal_id = ctx.principal_id
-        except (JWTError, ValueError, KeyError, httpx.HTTPError):
+        except (JWTError, ValueError, KeyError, httpx.HTTPError) as exc:
+            logger.warning("WS 인증 실패 (%s): %s", type(exc).__name__, exc)
+            await ws.close(code=4001)
+            return None
+        except Exception:
+            logger.error("WS 인증 중 예상치 못한 오류", exc_info=True)
             await ws.close(code=4001)
             return None
 
         await ws.accept()
         self._connections[principal_id].add(ws)
+        logger.debug("WS 연결: principal=%s", principal_id)
         return principal_id
 
     async def on_disconnect(self, ws: WebSocket, principal_id: UUID) -> None:
