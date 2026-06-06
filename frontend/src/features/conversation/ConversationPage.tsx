@@ -140,9 +140,7 @@ export function ConversationPage() {
             </div>
             {/* Manual dates are user-driven — show the composer. Auto dates run
                 between the agents, so no input. */}
-            {data.matchInfo.matchType === "manual" ? (
-              <ChatInput onSubmit={handleSend} />
-            ) : null}
+            {data.matchInfo.matchType === "manual" ? <ChatInput onSubmit={handleSend} /> : null}
             <ConversationMenuSheet
               open={menuOpen}
               onOpenChange={setMenuOpen}
